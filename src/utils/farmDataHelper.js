@@ -69,16 +69,24 @@ export function getFarmerPonds(farmer) {
   if (!farmer) return MOCK_POND_BATCHES;
   
   // Demo account uses full rich mock dataset
-  if (farmer.id === 'farmer_01') {
+  if (farmer.id === 'farmer_01' || farmer.userId === 'WAF-DEMO-01') {
     return MOCK_POND_BATCHES;
   }
 
   try {
-    const saved = localStorage.getItem(`well_aqua_ponds_${farmer.id}`);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+    const keysToCheck = [
+      farmer.id ? `well_aqua_ponds_${farmer.id}` : null,
+      farmer.userId ? `well_aqua_ponds_${farmer.userId}` : null,
+      farmer.authUserId ? `well_aqua_ponds_${farmer.authUserId}` : null
+    ].filter(Boolean);
+
+    for (const key of keysToCheck) {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
     }
   } catch (e) {
@@ -88,20 +96,33 @@ export function getFarmerPonds(farmer) {
   // Generate authentic ponds tailored to user's registered parameters
   const initial = generateInitialFarmerPonds(farmer);
   try {
-    localStorage.setItem(`well_aqua_ponds_${farmer.id}`, JSON.stringify(initial));
+    if (farmer.id) localStorage.setItem(`well_aqua_ponds_${farmer.id}`, JSON.stringify(initial));
+    if (farmer.userId) localStorage.setItem(`well_aqua_ponds_${farmer.userId}`, JSON.stringify(initial));
+    if (farmer.authUserId) localStorage.setItem(`well_aqua_ponds_${farmer.authUserId}`, JSON.stringify(initial));
   } catch (e) {}
   return initial;
 }
 
 export function getFarmerBookings(farmer) {
   if (!farmer) return [];
-  if (farmer.id === 'farmer_01') {
+  if (farmer.id === 'farmer_01' || farmer.userId === 'WAF-DEMO-01') {
     return MOCK_LAB_BOOKINGS;
   }
   try {
-    const saved = localStorage.getItem(`well_aqua_bookings_${farmer.id}`);
-    if (saved) {
-      return JSON.parse(saved);
+    const keysToCheck = [
+      farmer.id ? `well_aqua_bookings_${farmer.id}` : null,
+      farmer.userId ? `well_aqua_bookings_${farmer.userId}` : null,
+      farmer.authUserId ? `well_aqua_bookings_${farmer.authUserId}` : null
+    ].filter(Boolean);
+
+    for (const key of keysToCheck) {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
     }
   } catch (e) {}
   return []; // Clean empty bookings for newly registered farmers

@@ -145,6 +145,27 @@ export default function App() {
     showToast(`Farm report updated for ${updatedPond.name}!`, 'success');
   };
 
+  const handlePondsUpdated = (targetFarmerId, updatedPonds, targetFarmer) => {
+    const isCurrentUser = user && (
+      user.id === targetFarmerId || 
+      user.userId === targetFarmerId || 
+      (targetFarmer && targetFarmer.userId && user.userId === targetFarmer.userId) ||
+      (targetFarmer && user.phone && targetFarmer.phone && user.phone.replace(/\D/g,'').slice(-10) === targetFarmer.phone.replace(/\D/g,'').slice(-10))
+    );
+    const isInspecting = inspectingFarmer && (
+      inspectingFarmer.id === targetFarmerId || 
+      inspectingFarmer.userId === targetFarmerId ||
+      (targetFarmer && inspectingFarmer.phone && targetFarmer.phone && inspectingFarmer.phone.replace(/\D/g,'').slice(-10) === targetFarmer.phone.replace(/\D/g,'').slice(-10))
+    );
+
+    if (isCurrentUser || isInspecting) {
+      setPonds(updatedPonds);
+      if (updatedPonds && updatedPonds.length > 0) {
+        setActivePond(updatedPonds[0]);
+      }
+    }
+  };
+
   const handleUpdatePondsList = (updatedPonds, newActivePond) => {
     setPonds(updatedPonds);
     if (newActivePond) {
@@ -387,6 +408,7 @@ export default function App() {
             onInspectFarmer={handleInspectFarmer}
             currentUser={user}
             showToast={showToast}
+            onPondsUpdated={handlePondsUpdated}
           />
         )}
 

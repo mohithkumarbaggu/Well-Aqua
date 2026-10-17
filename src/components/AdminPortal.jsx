@@ -46,26 +46,74 @@ import {
 } from 'lucide-react';
 import { getOrGenerateUserId, seedAllFarmersToSupabase, syncUserToSupabase } from '../utils/userIdGenerator';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { getFarmerPonds, generateInitialFarmerPonds } from '../utils/farmDataHelper';
+
+// Helper to load admin farmers combined with locally registered users
+function loadCombinedAdminFarmers() {
+  let list = [...INITIAL_ADMIN_FARMERS];
+  try {
+    const saved = localStorage.getItem('well_aqua_admin_farmers');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        list = parsed;
+      }
+    }
+  } catch (e) {}
+
+  // Merge registered users from localStorage (wellaqua_registered_users)
+  try {
+    const regRaw = localStorage.getItem('wellaqua_registered_users');
+    if (regRaw) {
+      const registered = JSON.parse(regRaw);
+      if (Array.isArray(registered)) {
+        registered.forEach(regUser => {
+          const uId = regUser.user_id || regUser.userId || regUser.id;
+          const uPhone = (regUser.phone || '').replace(/\D/g, '').slice(-10);
+          const already = list.some(f => {
+            const fPhone = (f.phone || '').replace(/\D/g, '').slice(-10);
+            return (uId && (f.id === uId || f.userId === uId)) || (uPhone && fPhone === uPhone);
+          });
+          if (!already && uId) {
+            list.unshift({
+              id: uId,
+              userId: uId,
+              name: regUser.full_name || regUser.name || 'Registered Farmer',
+              farmName: regUser.farm_name || regUser.farmName || 'Coastal Aqua Farm',
+              phone: regUser.phone ? (regUser.phone.startsWith('+91') ? regUser.phone : `+91 ${regUser.phone}`) : '+91 98480 12345',
+              email: regUser.email || '',
+              pin: regUser.login_pin || regUser.pin || '1234',
+              location: regUser.location || 'Andhra Pradesh',
+              caaRegNo: regUser.caaRegNo || `CAA/2025/REG/${Math.floor(10000 + Math.random() * 90000)}`,
+              mpedaId: regUser.mpedaId || `MPEDA-REG-${Math.floor(1000 + Math.random() * 9000)}`,
+              totalAreaAcres: Number(regUser.total_acres || regUser.totalAreaAcres) || 4.0,
+              totalPondsCount: Number(regUser.total_ponds || regUser.totalPondsCount) || 3,
+              primarySpecies: regUser.primary_species || regUser.primarySpecies || 'L. vannamei (Pacific White)',
+              status: 'Verified',
+              joinedDate: new Date().toISOString().split('T')[0],
+              lastActive: 'Active User',
+              criticalAlertsCount: 0
+            });
+          }
+        });
+      }
+    }
+  } catch (e) {}
+
+  return list;
+}
 
 export default function AdminPortal({ 
   onSwitchToFarmer, 
   onInspectFarmer, 
   currentUser,
-  showToast 
+  showToast,
+  onPondsUpdated
 }) {
   const [adminTab, setAdminTab] = useState('overview'); // 'overview' | 'farmers' | 'ponds' | 'labs' | 'pharmacy'
   
-  // Persistent Farmers State
-  const [farmers, setFarmers] = useState(() => {
-    try {
-      const saved = localStorage.getItem('well_aqua_admin_farmers');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return INITIAL_ADMIN_FARMERS;
-  });
+  // Persistent Farmers State (Merged with registered users)
+  const [farmers, setFarmers] = useState(() => loadCombinedAdminFarmers());
 
   // Persistent Lab Bookings State
   const [labOrders, setLabOrders] = useState(() => {
@@ -156,6 +204,56 @@ export default function AdminPortal({
     } catch (e) {}
   }, [dispatchedLabReadings]);
 
+  // Sync cloud user accounts from Supabase user_logins into admin directory on mount
+  useEffect(() => {
+    async function fetchSupabaseUsers() {
+      if (!isSupabaseConfigured) return;
+      try {
+        const { data, error } = await supabase.from('user_logins').select('*');
+        if (!error && Array.isArray(data) && data.length > 0) {
+          setFarmers(prev => {
+            const updated = [...prev];
+            let changed = false;
+            data.forEach(su => {
+              const uId = su.user_id || su.id;
+              const suPhone = (su.phone || '').replace(/\D/g, '').slice(-10);
+              const exists = updated.some(f => {
+                const fPhone = (f.phone || '').replace(/\D/g, '').slice(-10);
+                return (uId && (f.id === uId || f.userId === uId)) || (suPhone && fPhone === suPhone);
+              });
+              if (!exists && uId) {
+                changed = true;
+                updated.unshift({
+                  id: uId,
+                  userId: uId,
+                  name: su.full_name || 'Registered Farmer',
+                  farmName: su.farm_name || 'Aqua Farm',
+                  phone: su.phone ? (su.phone.startsWith('+91') ? su.phone : `+91 ${su.phone}`) : '+91 98480 12345',
+                  email: su.email || '',
+                  pin: su.login_pin || '1234',
+                  location: su.location || 'Andhra Pradesh',
+                  caaRegNo: `CAA/2025/REG/${Math.floor(10000 + Math.random() * 90000)}`,
+                  mpedaId: `MPEDA-REG-${Math.floor(1000 + Math.random() * 9000)}`,
+                  totalAreaAcres: Number(su.total_acres) || 4.0,
+                  totalPondsCount: Number(su.total_ponds) || 3,
+                  primarySpecies: su.primary_species || 'L. vannamei (Pacific White)',
+                  status: 'Verified',
+                  joinedDate: su.last_login_at ? su.last_login_at.split('T')[0] : new Date().toISOString().split('T')[0],
+                  lastActive: 'Active User',
+                  criticalAlertsCount: 0
+                });
+              }
+            });
+            return changed ? updated : prev;
+          });
+        }
+      } catch (err) {
+        console.warn('Notice loading Supabase users for admin:', err);
+      }
+    }
+    fetchSupabaseUsers();
+  }, []);
+
   // Search & Filters
   const [farmerSearch, setFarmerSearch] = useState('');
   const [farmerStatusFilter, setFarmerStatusFilter] = useState('ALL');
@@ -180,34 +278,112 @@ export default function AdminPortal({
 
   // Dispatch Water & Soil Test Readings Modal State
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
-  const [dispatchForm, setDispatchForm] = useState({
-    farmerId: '',
-    farmerName: '',
-    farmName: '',
-    pondId: '',
-    pondName: 'Pond #1 (North Dykes)',
-    testDate: new Date().toISOString().split('T')[0],
-    technicianName: 'Dr. Ramesh Varma (Senior Microbiologist)',
-    labFacility: 'Well Aqua Coastal Central Diagnostic Facility, Bhimavaram',
-    // Water readings
-    doMorning: 5.6,
-    doEvening: 7.2,
-    phMorning: 7.8,
-    phEvening: 8.2,
-    salinity: 15.0,
-    alkalinity: 135,
-    tan: 0.04,
-    no2: 0.02,
-    temperature: 29.5,
-    waterColor: 'Planktonic Golden Green',
-    // Soil readings
-    soilPh: 7.2,
-    organicCarbonPct: 1.15,
-    h2sPpm: 0.003,
-    ironPpm: 'Normal / Trace',
-    sludgeDepthCm: 3.2,
-    recommendations: 'Water and soil parameters are in optimal culture range. Maintain aeration protocol.'
+  const [dispatchForm, setDispatchForm] = useState(() => {
+    const firstF = (farmers && farmers[0]) || null;
+    return {
+      farmerId: firstF ? firstF.id : '',
+      farmerName: firstF ? firstF.name : '',
+      farmName: firstF ? firstF.farmName : '',
+      pondId: 'ALL',
+      pondName: 'All Ponds (Batch Update)',
+      testDate: new Date().toISOString().split('T')[0],
+      technicianName: 'Dr. Ramesh Varma (Senior Microbiologist)',
+      labFacility: 'Well Aqua Coastal Central Diagnostic Facility, Bhimavaram',
+      // Water readings
+      doMorning: 5.8,
+      doEvening: 7.2,
+      phMorning: 7.8,
+      phEvening: 8.2,
+      salinity: 16.0,
+      alkalinity: 140,
+      tan: 0.04,
+      no2: 0.02,
+      temperature: 29.5,
+      waterColor: 'Planktonic Golden Green',
+      // Soil readings
+      soilPh: 7.2,
+      organicCarbonPct: 1.15,
+      h2sPpm: 0.003,
+      ironPpm: 'Normal / Trace',
+      sludgeDepthCm: 3.2,
+      recommendations: 'Water and soil parameters are in optimal culture range. Maintain aeration protocol.'
+    };
   });
+
+  // Active selected farmer & their actual ponds for dispatch
+  const selectedFarmer = farmers.find(f => f.id === dispatchForm.farmerId) || farmers[0] || null;
+  const selectedFarmerPonds = selectedFarmer ? getFarmerPonds(selectedFarmer) : [];
+
+  // Handler when admin changes target farmer in dispatch studio / modal
+  const handleSelectFarmerForDispatch = (farmerId) => {
+    const target = farmers.find(f => f.id === farmerId);
+    if (!target) return;
+    const targetPonds = getFarmerPonds(target);
+    const firstPond = targetPonds && targetPonds.length > 0 ? targetPonds[0] : null;
+    const pParams = firstPond?.waterParameters || {};
+    const sParams = firstPond?.soilParameters || {};
+
+    setDispatchForm(prev => ({
+      ...prev,
+      farmerId: target.id,
+      farmerName: target.name,
+      farmName: target.farmName,
+      pondId: firstPond ? firstPond.id : 'ALL',
+      pondName: firstPond ? firstPond.name : 'All Ponds (Batch Update)',
+      doMorning: pParams.doMorning != null ? pParams.doMorning : 5.8,
+      doEvening: pParams.doEvening != null ? pParams.doEvening : 7.2,
+      phMorning: pParams.phMorning != null ? pParams.phMorning : 7.8,
+      phEvening: pParams.phEvening != null ? pParams.phEvening : 8.2,
+      salinity: pParams.salinity != null ? pParams.salinity : 16.0,
+      alkalinity: pParams.alkalinity != null ? pParams.alkalinity : 140,
+      tan: pParams.tan != null ? pParams.tan : 0.04,
+      no2: pParams.no2 != null ? pParams.no2 : 0.02,
+      temperature: pParams.temperature != null ? pParams.temperature : 29.5,
+      waterColor: pParams.waterColor || 'Planktonic Golden Green',
+      soilPh: sParams.soilPh != null ? sParams.soilPh : 7.2,
+      organicCarbonPct: sParams.organicCarbonPct != null ? sParams.organicCarbonPct : 1.15,
+      h2sPpm: sParams.h2sPpm != null ? sParams.h2sPpm : 0.003,
+      ironPpm: sParams.ironPpm || 'Normal / Trace',
+      sludgeDepthCm: sParams.sludgeDepthCm != null ? sParams.sludgeDepthCm : 3.2
+    }));
+  };
+
+  // Handler when admin changes pond in dispatch studio / modal
+  const handleSelectPondForDispatch = (pondId) => {
+    if (pondId === 'ALL') {
+      setDispatchForm(prev => ({
+        ...prev,
+        pondId: 'ALL',
+        pondName: 'All Ponds (Batch Update)'
+      }));
+      return;
+    }
+    const foundPond = selectedFarmerPonds.find(p => p.id === pondId);
+    if (foundPond) {
+      const pParams = foundPond.waterParameters || {};
+      const sParams = foundPond.soilParameters || {};
+      setDispatchForm(prev => ({
+        ...prev,
+        pondId: foundPond.id,
+        pondName: foundPond.name,
+        doMorning: pParams.doMorning != null ? pParams.doMorning : prev.doMorning,
+        doEvening: pParams.doEvening != null ? pParams.doEvening : prev.doEvening,
+        phMorning: pParams.phMorning != null ? pParams.phMorning : prev.phMorning,
+        phEvening: pParams.phEvening != null ? pParams.phEvening : prev.phEvening,
+        salinity: pParams.salinity != null ? pParams.salinity : prev.salinity,
+        alkalinity: pParams.alkalinity != null ? pParams.alkalinity : prev.alkalinity,
+        tan: pParams.tan != null ? pParams.tan : prev.tan,
+        no2: pParams.no2 != null ? pParams.no2 : prev.no2,
+        temperature: pParams.temperature != null ? pParams.temperature : prev.temperature,
+        waterColor: pParams.waterColor || prev.waterColor,
+        soilPh: sParams.soilPh != null ? sParams.soilPh : prev.soilPh,
+        organicCarbonPct: sParams.organicCarbonPct != null ? sParams.organicCarbonPct : prev.organicCarbonPct,
+        h2sPpm: sParams.h2sPpm != null ? sParams.h2sPpm : prev.h2sPpm,
+        ironPpm: sParams.ironPpm || prev.ironPpm,
+        sludgeDepthCm: sParams.sludgeDepthCm != null ? sParams.sludgeDepthCm : prev.sludgeDepthCm
+      }));
+    }
+  };
 
   // Broadcast Updates Modal State
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
@@ -262,30 +438,36 @@ export default function AdminPortal({
   // Open Lab Dispatch Modal (Water & Soil Readings)
   const handleOpenDispatchModal = (farmer = null) => {
     const target = farmer || (farmers && farmers[0]) || null;
+    if (!target) return;
+    const targetPonds = getFarmerPonds(target);
+    const firstPond = targetPonds && targetPonds.length > 0 ? targetPonds[0] : null;
+    const pParams = firstPond?.waterParameters || {};
+    const sParams = firstPond?.soilParameters || {};
+
     setDispatchForm({
-      farmerId: target ? target.id : '',
-      farmerName: target ? target.name : '',
-      farmName: target ? target.farmName : '',
-      pondId: target ? `pond-${target.id}-1` : 'pond-1',
-      pondName: 'Pond #1 (Primary)',
+      farmerId: target.id,
+      farmerName: target.name,
+      farmName: target.farmName,
+      pondId: firstPond ? firstPond.id : 'ALL',
+      pondName: firstPond ? firstPond.name : 'All Ponds (Batch Update)',
       testDate: new Date().toISOString().split('T')[0],
       technicianName: 'Dr. Ramesh Varma (Senior Aquatic Pathologist)',
       labFacility: 'Well Aqua Coastal Diagnostic Hub, Bhimavaram',
-      doMorning: 5.8,
-      doEvening: 7.2,
-      phMorning: 7.8,
-      phEvening: 8.2,
-      salinity: 16.0,
-      alkalinity: 140,
-      tan: 0.04,
-      no2: 0.02,
-      temperature: 29.5,
-      waterColor: 'Planktonic Golden Green',
-      soilPh: 7.2,
-      organicCarbonPct: 1.15,
-      h2sPpm: 0.003,
-      ironPpm: 'Normal / Trace',
-      sludgeDepthCm: 3.2,
+      doMorning: pParams.doMorning != null ? pParams.doMorning : 5.8,
+      doEvening: pParams.doEvening != null ? pParams.doEvening : 7.2,
+      phMorning: pParams.phMorning != null ? pParams.phMorning : 7.8,
+      phEvening: pParams.phEvening != null ? pParams.phEvening : 8.2,
+      salinity: pParams.salinity != null ? pParams.salinity : 16.0,
+      alkalinity: pParams.alkalinity != null ? pParams.alkalinity : 140,
+      tan: pParams.tan != null ? pParams.tan : 0.04,
+      no2: pParams.no2 != null ? pParams.no2 : 0.02,
+      temperature: pParams.temperature != null ? pParams.temperature : 29.5,
+      waterColor: pParams.waterColor || 'Planktonic Golden Green',
+      soilPh: sParams.soilPh != null ? sParams.soilPh : 7.2,
+      organicCarbonPct: sParams.organicCarbonPct != null ? sParams.organicCarbonPct : 1.15,
+      h2sPpm: sParams.h2sPpm != null ? sParams.h2sPpm : 0.003,
+      ironPpm: sParams.ironPpm || 'Normal / Trace',
+      sludgeDepthCm: sParams.sludgeDepthCm != null ? sParams.sludgeDepthCm : 3.2,
       recommendations: 'Water and soil parameters are in optimal culture range. Maintain aeration protocol.'
     });
     setIsDispatchModalOpen(true);
@@ -308,18 +490,18 @@ export default function AdminPortal({
       farmerName: targetFarmer.name,
       farmName: targetFarmer.farmName,
       pondId: dispatchForm.pondId || `pond-${targetFarmer.id}-1`,
-      pondName: dispatchForm.pondName || 'Pond #1',
+      pondName: dispatchForm.pondName || 'All Ponds',
       date: dispatchForm.testDate || new Date().toISOString().split('T')[0],
       testedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       technicianName: dispatchForm.technicianName || 'Well Aqua Field Specialist',
       labFacility: dispatchForm.labFacility || 'Well Aqua Coastal Central Diagnostic Facility',
       waterParameters: {
-        doMorning: parseFloat(dispatchForm.doMorning) || 5.6,
-        doEvening: parseFloat(dispatchForm.doEvening) || 7.0,
+        doMorning: parseFloat(dispatchForm.doMorning) || 5.8,
+        doEvening: parseFloat(dispatchForm.doEvening) || 7.2,
         phMorning: parseFloat(dispatchForm.phMorning) || 7.8,
         phEvening: parseFloat(dispatchForm.phEvening) || 8.2,
-        salinity: parseFloat(dispatchForm.salinity) || 15.0,
-        alkalinity: parseFloat(dispatchForm.alkalinity) || 135,
+        salinity: parseFloat(dispatchForm.salinity) || 16.0,
+        alkalinity: parseFloat(dispatchForm.alkalinity) || 140,
         tan: parseFloat(dispatchForm.tan) || 0.04,
         no2: parseFloat(dispatchForm.no2) || 0.02,
         temperature: parseFloat(dispatchForm.temperature) || 29.5,
@@ -342,53 +524,55 @@ export default function AdminPortal({
       localStorage.setItem('well_aqua_admin_dispatched_tests', JSON.stringify(updatedDispatched));
     } catch (e) {}
 
-    // 2. Update the target farmer's active pond telemetry in localStorage!
+    // 2. Update the target farmer's active pond telemetry in localStorage & memory
+    let updatedPondsList = [];
     try {
-      const savedPondsKey = `well_aqua_ponds_${targetFarmer.id}`;
-      let pondsList = [];
-      const existing = localStorage.getItem(savedPondsKey);
-      if (existing) {
-        pondsList = JSON.parse(existing);
+      const pondsList = getFarmerPonds(targetFarmer);
+      const isTargetAll = dispatchForm.pondId === 'ALL' || !dispatchForm.pondId;
+
+      updatedPondsList = pondsList.map(p => {
+        const isMatch = isTargetAll || 
+                        p.id === dispatchForm.pondId || 
+                        p.name === dispatchForm.pondName || 
+                        (pondsList.length === 1);
+        if (isMatch) {
+          return {
+            ...p,
+            hasRecordedWaterParams: true,
+            hasCustomReport: true,
+            isNewBatch: false,
+            lastLabUpdate: new Date().toISOString(),
+            lastUpdatedBy: dispatchForm.technicianName || 'Admin Diagnostics Hub',
+            waterParameters: {
+              ...(p.waterParameters || {}),
+              ...dispatchRecord.waterParameters
+            },
+            soilParameters: {
+              ...(p.soilParameters || {}),
+              ...dispatchRecord.soilParameters
+            }
+          };
+        }
+        return p;
+      });
+
+      // Save across all identifier keys for this farmer
+      const keysToSave = [
+        targetFarmer.id ? `well_aqua_ponds_${targetFarmer.id}` : null,
+        targetFarmer.userId ? `well_aqua_ponds_${targetFarmer.userId}` : null,
+        targetFarmer.authUserId ? `well_aqua_ponds_${targetFarmer.authUserId}` : null
+      ].filter(Boolean);
+
+      for (const k of keysToSave) {
+        localStorage.setItem(k, JSON.stringify(updatedPondsList));
       }
-      if (!Array.isArray(pondsList) || pondsList.length === 0) {
-        pondsList = [
-          {
-            id: dispatchRecord.pondId,
-            name: dispatchRecord.pondName,
-            species: targetFarmer.primarySpecies || 'Vannamei Shrimp',
-            areaHectares: 0.8,
-            doc: 45,
-            waterParameters: dispatchRecord.waterParameters,
-            soilParameters: dispatchRecord.soilParameters,
-            lastLabUpdate: new Date().toISOString()
-          }
-        ];
-      } else {
-        pondsList = pondsList.map(p => {
-          if (p.id === dispatchRecord.pondId || p.name === dispatchRecord.pondName) {
-            return {
-              ...p,
-              waterParameters: { ...p.waterParameters, ...dispatchRecord.waterParameters },
-              soilParameters: dispatchRecord.soilParameters,
-              lastLabUpdate: new Date().toISOString()
-            };
-          }
-          return p;
-        });
-      }
-      localStorage.setItem(savedPondsKey, JSON.stringify(pondsList));
     } catch (err) {
       console.warn('Error saving updated pond for farmer:', err);
     }
 
     // 3. Add to target farmer's bookings / lab reports
     try {
-      const savedBookingsKey = `well_aqua_bookings_${targetFarmer.id}`;
-      let bookingsList = [];
-      const existingB = localStorage.getItem(savedBookingsKey);
-      if (existingB) {
-        bookingsList = JSON.parse(existingB);
-      }
+      const bookingsList = getFarmerBookings(targetFarmer);
       const newBooking = {
         id: dispatchRecord.id,
         serviceTitle: 'Comprehensive Water & Soil Quality Laboratory Panel',
@@ -407,10 +591,23 @@ export default function AdminPortal({
           dispatchedAt: new Date().toISOString()
         }
       };
-      localStorage.setItem(savedBookingsKey, JSON.stringify([newBooking, ...(Array.isArray(bookingsList) ? bookingsList : [])]));
+      const updatedBookings = [newBooking, ...bookingsList];
+      const bKeys = [
+        targetFarmer.id ? `well_aqua_bookings_${targetFarmer.id}` : null,
+        targetFarmer.userId ? `well_aqua_bookings_${targetFarmer.userId}` : null,
+        targetFarmer.authUserId ? `well_aqua_bookings_${targetFarmer.authUserId}` : null
+      ].filter(Boolean);
+      for (const bk of bKeys) {
+        localStorage.setItem(bk, JSON.stringify(updatedBookings));
+      }
     } catch (err) {}
 
-    // 4. Sync to Supabase water_parameters and lab_bookings if configured
+    // 4. Notify parent App.jsx so live dashboard updates immediately if viewing this farmer
+    if (onPondsUpdated && updatedPondsList.length > 0) {
+      onPondsUpdated(targetFarmer.id, updatedPondsList, targetFarmer);
+    }
+
+    // 5. Sync to Supabase water_parameters and lab_bookings if configured
     if (isSupabaseConfigured) {
       try {
         await supabase.from('water_parameters').insert([{
@@ -444,7 +641,7 @@ export default function AdminPortal({
 
     setIsDispatchModalOpen(false);
     if (showToast) {
-      showToast(`✅ Official Water & Soil Test readings successfully sent to ${targetFarmer.name}'s ${dispatchRecord.pondName}!`, 'success');
+      showToast(`✅ Official Water & Soil Test readings successfully saved & sent to ${targetFarmer.name}'s ${dispatchRecord.pondName}!`, 'success');
     }
   };
 
@@ -1361,18 +1558,7 @@ export default function AdminPortal({
                   </label>
                   <select
                     value={dispatchForm.farmerId}
-                    onChange={(e) => {
-                      const f = farmers.find(farm => farm.id === e.target.value);
-                      if (f) {
-                        setDispatchForm({
-                          ...dispatchForm,
-                          farmerId: f.id,
-                          farmerName: f.name,
-                          farmName: f.farmName,
-                          pondId: `pond_${f.id}_1`
-                        });
-                      }
-                    }}
+                    onChange={(e) => handleSelectFarmerForDispatch(e.target.value)}
                     className="input-field"
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', fontWeight: 600 }}
                   >
@@ -1386,17 +1572,21 @@ export default function AdminPortal({
 
                 <div>
                   <label style={{ fontSize: '0.82rem', fontWeight: 700, display: 'block', marginBottom: '6px' }}>
-                    Target Pond / Basin:
+                    Select Pond / Basin:
                   </label>
-                  <input
-                    type="text"
-                    value={dispatchForm.pondName}
-                    onChange={(e) => setDispatchForm({ ...dispatchForm, pondName: e.target.value })}
+                  <select
+                    value={dispatchForm.pondId}
+                    onChange={(e) => handleSelectPondForDispatch(e.target.value)}
                     className="input-field"
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px' }}
-                    placeholder="e.g. Pond #1 (Nursery Dyke)"
-                    required
-                  />
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', fontWeight: 600 }}
+                  >
+                    <option value="ALL">🌟 ALL Ponds ({selectedFarmerPonds.length} Ponds - Batch Update)</option>
+                    {selectedFarmerPonds.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.hasRecordedWaterParams ? '✓ (Current pH: ' + (p.waterParameters?.phMorning || '7.8') + ', DO: ' + (p.waterParameters?.doMorning || '5.8') + ')' : '🌱 (Awaiting Telemetry)'}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -1427,6 +1617,38 @@ export default function AdminPortal({
                   />
                 </div>
               </div>
+
+              {/* Real-time Telemetry Status Banner for Selected Target */}
+              {selectedFarmer && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: (selectedFarmerPonds.find(p => p.id === dispatchForm.pondId)?.hasRecordedWaterParams) 
+                    ? 'rgba(16, 185, 129, 0.08)' 
+                    : 'rgba(2, 132, 199, 0.08)',
+                  border: (selectedFarmerPonds.find(p => p.id === dispatchForm.pondId)?.hasRecordedWaterParams) 
+                    ? '1px solid rgba(16, 185, 129, 0.3)' 
+                    : '1px solid rgba(2, 132, 199, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  fontSize: '0.86rem'
+                }}>
+                  <span style={{ fontSize: '1.3rem' }}>
+                    {(selectedFarmerPonds.find(p => p.id === dispatchForm.pondId)?.hasRecordedWaterParams) ? '📊' : '🌱'}
+                  </span>
+                  <div>
+                    <div>
+                      <strong>Target Farmer: {dispatchForm.farmerName} ({dispatchForm.farmName})</strong> — <em>{dispatchForm.pondName}</em>
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {(selectedFarmerPonds.find(p => p.id === dispatchForm.pondId)?.hasRecordedWaterParams)
+                        ? '✓ Verified lab telemetry is already active for this pond. Entering new readings will push a calibrated update.'
+                        : '🌱 Currently in pending status (awaiting lab entry). Saving these values will instantly activate live charts and parameter cards on the farmer dashboard.'}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Water Quality Telemetry Panel */}
               <div style={{ background: 'rgba(2, 132, 199, 0.04)', border: '1px solid rgba(2, 132, 199, 0.2)', padding: '18px', borderRadius: '14px' }}>
@@ -1971,16 +2193,27 @@ export default function AdminPortal({
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', fontSize: '0.82rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', fontSize: '0.82rem', flexWrap: 'wrap', gap: '8px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>{farmer.totalPondsCount} Operational Ponds</span>
-                    <button
-                      onClick={() => onInspectFarmer(farmer)}
-                      className="btn-primary"
-                      style={{ padding: '6px 14px', fontSize: '0.8rem' }}
-                    >
-                      <Eye size={13} />
-                      <span>Inspect Farm</span>
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={() => handleOpenDispatchModal(farmer)}
+                        className="btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '0.78rem', borderColor: '#38bdf8', color: 'var(--cyan)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        title="Enter / update water & soil testing data for this farmer"
+                      >
+                        <Droplets size={13} />
+                        <span>Enter Water Data</span>
+                      </button>
+                      <button
+                        onClick={() => onInspectFarmer(farmer)}
+                        className="btn-primary"
+                        style={{ padding: '6px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Eye size={13} />
+                        <span>Inspect Farm</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -2457,39 +2690,33 @@ export default function AdminPortal({
                   <label style={{ fontSize: '0.8rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Target Farmer:</label>
                   <select
                     value={dispatchForm.farmerId}
-                    onChange={(e) => {
-                      const f = farmers.find(farm => farm.id === e.target.value);
-                      if (f) {
-                        setDispatchForm({
-                          ...dispatchForm,
-                          farmerId: f.id,
-                          farmerName: f.name,
-                          farmName: f.farmName,
-                          pondId: `pond_${f.id}_1`
-                        });
-                      }
-                    }}
+                    onChange={(e) => handleSelectFarmerForDispatch(e.target.value)}
                     className="input-field"
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.85rem' }}
                   >
                     {farmers.map(f => (
                       <option key={f.id} value={f.id}>
-                        {f.name} — {f.farmName}
+                        {f.name} — {f.farmName} [ID: {f.userId || getOrGenerateUserId(f)}]
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Pond / Basin Name:</label>
-                  <input
-                    type="text"
-                    value={dispatchForm.pondName}
-                    onChange={(e) => setDispatchForm({ ...dispatchForm, pondName: e.target.value })}
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Select Pond / Basin:</label>
+                  <select
+                    value={dispatchForm.pondId}
+                    onChange={(e) => handleSelectPondForDispatch(e.target.value)}
                     className="input-field"
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.85rem' }}
-                    required
-                  />
+                  >
+                    <option value="ALL">🌟 ALL Ponds ({selectedFarmerPonds.length} Ponds - Batch Update)</option>
+                    {selectedFarmerPonds.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.hasRecordedWaterParams ? '✓ (Current pH: ' + (p.waterParameters?.phMorning || '7.8') + ', DO: ' + (p.waterParameters?.doMorning || '5.8') + ')' : '🌱 (Awaiting Telemetry)'}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -2516,6 +2743,38 @@ export default function AdminPortal({
                   />
                 </div>
               </div>
+
+              {/* Real-time Telemetry Status Banner for Modal Target */}
+              {selectedFarmer && (
+                <div style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: (selectedFarmerPonds.find(p => p.id === dispatchForm.pondId)?.hasRecordedWaterParams) 
+                    ? 'rgba(16, 185, 129, 0.08)' 
+                    : 'rgba(2, 132, 199, 0.08)',
+                  border: (selectedFarmerPonds.find(p => p.id === dispatchForm.pondId)?.hasRecordedWaterParams) 
+                    ? '1px solid rgba(16, 185, 129, 0.3)' 
+                    : '1px solid rgba(2, 132, 199, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontSize: '0.84rem'
+                }}>
+                  <span style={{ fontSize: '1.2rem' }}>
+                    {(selectedFarmerPonds.find(p => p.id === dispatchForm.pondId)?.hasRecordedWaterParams) ? '📊' : '🌱'}
+                  </span>
+                  <div>
+                    <div>
+                      <strong>Target: {dispatchForm.farmerName}</strong> — <em>{dispatchForm.pondName}</em>
+                    </div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                      {(selectedFarmerPonds.find(p => p.id === dispatchForm.pondId)?.hasRecordedWaterParams)
+                        ? '✓ Verified lab telemetry is already active for this pond.'
+                        : '🌱 Currently in pending status (awaiting lab entry). Saving will activate the farmer dashboard.'}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Water Parameters */}
               <div style={{ background: 'rgba(2, 132, 199, 0.05)', border: '1px solid #bae6fd', padding: '16px', borderRadius: '12px' }}>
