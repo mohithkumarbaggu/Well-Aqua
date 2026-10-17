@@ -22,22 +22,52 @@ export default function PondPerformanceSection({
   setActivePond, 
   ponds 
 }) {
-  const [logs, setLogs] = useState([
-    { date: '2026-10-16', time: '06:30 AM', doVal: 4.8, phVal: 7.8, feedCheck: 'Clean (100% consumed)', mortality: 0 },
-    { date: '2026-10-15', time: '06:30 AM', doVal: 4.9, phVal: 7.9, feedCheck: 'Clean (100% consumed)', mortality: 0 },
-    { date: '2026-10-14', time: '06:30 AM', doVal: 4.6, phVal: 7.7, feedCheck: 'Slight leftover (5%)', mortality: 2 },
-    { date: '2026-10-13', time: '06:30 AM', doVal: 5.1, phVal: 8.0, feedCheck: 'Clean (100% consumed)', mortality: 0 }
-  ]);
+  const [logs, setLogs] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`well_aqua_logs_${activePond?.id}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    if (activePond?.id === 'pond-1') {
+      return [
+        { date: '2026-10-16', time: '06:30 AM', doVal: 4.8, phVal: 7.8, feedCheck: 'Clean (100% consumed)', mortality: 0 },
+        { date: '2026-10-15', time: '06:30 AM', doVal: 4.9, phVal: 7.9, feedCheck: 'Clean (100% consumed)', mortality: 0 },
+        { date: '2026-10-14', time: '06:30 AM', doVal: 4.6, phVal: 7.7, feedCheck: 'Slight leftover (5%)', mortality: 2 },
+        { date: '2026-10-13', time: '06:30 AM', doVal: 5.1, phVal: 8.0, feedCheck: 'Clean (100% consumed)', mortality: 0 }
+      ];
+    }
+    return [];
+  });
+
+  // Sync logs when active pond changes
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`well_aqua_logs_${activePond?.id}`);
+      if (saved) {
+        setLogs(JSON.parse(saved));
+        return;
+      }
+    } catch (e) {}
+    if (activePond?.id === 'pond-1') {
+      setLogs([
+        { date: '2026-10-16', time: '06:30 AM', doVal: 4.8, phVal: 7.8, feedCheck: 'Clean (100% consumed)', mortality: 0 },
+        { date: '2026-10-15', time: '06:30 AM', doVal: 4.9, phVal: 7.9, feedCheck: 'Clean (100% consumed)', mortality: 0 },
+        { date: '2026-10-14', time: '06:30 AM', doVal: 4.6, phVal: 7.7, feedCheck: 'Slight leftover (5%)', mortality: 2 },
+        { date: '2026-10-13', time: '06:30 AM', doVal: 5.1, phVal: 8.0, feedCheck: 'Clean (100% consumed)', mortality: 0 }
+      ]);
+    } else {
+      setLogs([]);
+    }
+  }, [activePond?.id]);
 
   // Daily Log Form State
-  const [newDO, setNewDO] = useState('4.8');
-  const [newPH, setNewPH] = useState('7.9');
+  const [newDO, setNewDO] = useState('5.0');
+  const [newPH, setNewPH] = useState('7.8');
   const [newCheckTray, setNewCheckTray] = useState('Clean (100% consumed)');
   const [newMortality, setNewMortality] = useState('0');
   const [logAddedSuccess, setLogAddedSuccess] = useState(false);
 
-  const fin = activePond.financials;
-  const history = activePond.historicalDOC;
+  const fin = activePond.financials || {};
+  const history = activePond.historicalDOC || [];
 
   const handleAddLog = (e) => {
     e.preventDefault();
@@ -49,7 +79,13 @@ export default function PondPerformanceSection({
       feedCheck: newCheckTray,
       mortality: parseInt(newMortality, 10) || 0
     };
-    setLogs([newEntry, ...logs]);
+    const updated = [newEntry, ...logs];
+    setLogs(updated);
+    if (activePond?.id) {
+      try {
+        localStorage.setItem(`well_aqua_logs_${activePond.id}`, JSON.stringify(updated));
+      } catch (err) {}
+    }
     setLogAddedSuccess(true);
     setTimeout(() => setLogAddedSuccess(false), 3000);
   };
@@ -136,9 +172,15 @@ export default function PondPerformanceSection({
             <span>Feed Conversion (FCR)</span>
             <Scale size={16} color="var(--emerald)" />
           </div>
-          <div className="kpi-value">{activePond.fcr}</div>
+          <div className="kpi-value">
+            {(activePond.hasCustomReport || activePond.id === 'pond-1') && activePond.fcr > 0 ? activePond.fcr : '--'}
+          </div>
           <div className="kpi-subtitle">
-            <strong style={{ color: '#34d399' }}>Grade A Efficiency</strong> (Consuming {activePond.fcr} kg feed/kg meat)
+            {(activePond.hasCustomReport || activePond.id === 'pond-1') && activePond.fcr > 0 ? (
+              <><strong style={{ color: '#34d399' }}>Grade A Efficiency</strong> (Consuming {activePond.fcr} kg feed/kg meat)</>
+            ) : (
+              <span style={{ color: 'var(--text-muted)' }}>Awaiting feeding records</span>
+            )}
           </div>
         </div>
 
@@ -147,9 +189,15 @@ export default function PondPerformanceSection({
             <span>Survival Rate</span>
             <Activity size={16} color="var(--cyan)" />
           </div>
-          <div className="kpi-value">{activePond.estimatedSurvivalRate}%</div>
+          <div className="kpi-value">
+            {(activePond.hasCustomReport || activePond.id === 'pond-1') && activePond.estimatedSurvivalRate > 0 ? `${activePond.estimatedSurvivalRate}%` : '--%'}
+          </div>
           <div className="kpi-subtitle">
-            Surviving count: {Math.round(activePond.stockedPL * (activePond.estimatedSurvivalRate / 100)).toLocaleString()} pcs
+            {(activePond.hasCustomReport || activePond.id === 'pond-1') && activePond.estimatedSurvivalRate > 0 ? (
+              `Surviving count: ${Math.round(activePond.stockedPL * (activePond.estimatedSurvivalRate / 100)).toLocaleString()} pcs`
+            ) : (
+              `Stocked: ${(activePond.stockedPL || 0).toLocaleString()} PL`
+            )}
           </div>
         </div>
 
@@ -158,9 +206,11 @@ export default function PondPerformanceSection({
             <span>Current Total Biomass</span>
             <Droplets size={16} color="var(--cyan)" />
           </div>
-          <div className="kpi-value">{activePond.estimatedBiomassKg.toLocaleString()} <span style={{ fontSize: '1rem' }}>kg</span></div>
+          <div className="kpi-value">
+            {(activePond.hasCustomReport || activePond.id === 'pond-1') && activePond.estimatedBiomassKg > 0 ? `${activePond.estimatedBiomassKg.toLocaleString()} kg` : '-- kg'}
+          </div>
           <div className="kpi-subtitle">
-            Stocking Density: {activePond.densityPL_m2} PL/m²
+            Stocking Density: {activePond.densityPL_m2 || 50} PL/m²
           </div>
         </div>
 
@@ -169,9 +219,11 @@ export default function PondPerformanceSection({
             <span>Growth Rate (ADG)</span>
             <Sparkles size={16} color="var(--amber)" />
           </div>
-          <div className="kpi-value">+{activePond.adg} <span style={{ fontSize: '1rem' }}>g/day</span></div>
+          <div className="kpi-value">
+            {(activePond.hasCustomReport || activePond.id === 'pond-1') && activePond.adg > 0 ? `+${activePond.adg} g/day` : '--'}
+          </div>
           <div className="kpi-subtitle">
-            Avg Body Weight: <strong style={{ color: 'var(--text-main)' }}>{activePond.currentAvgWeightGrams} grams</strong>
+            Avg Body Weight: <strong style={{ color: 'var(--text-main)' }}>{(activePond.hasCustomReport || activePond.id === 'pond-1') && activePond.currentAvgWeightGrams > 0 ? `${activePond.currentAvgWeightGrams} grams` : '-- g'}</strong>
           </div>
         </div>
       </div>
@@ -449,28 +501,36 @@ export default function PondPerformanceSection({
               </tr>
             </thead>
             <tbody>
-              {logs.map((log, lIdx) => (
-                <tr key={lIdx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-main)' }}>
-                    {log.date} <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>({log.time})</span>
-                  </td>
-                  <td style={{ padding: '10px 12px', color: log.doVal < 4.0 ? '#f43f5e' : 'var(--text-main)', fontWeight: 600 }}>
-                    {log.doVal} ppm
-                  </td>
-                  <td style={{ padding: '10px 12px', color: 'var(--text-main)' }}>{log.phVal}</td>
-                  <td style={{ padding: '10px 12px', color: log.feedCheck.includes('refused') ? '#f43f5e' : '#34d399' }}>
-                    {log.feedCheck}
-                  </td>
-                  <td style={{ padding: '10px 12px', color: log.mortality > 0 ? '#fbbf24' : 'var(--text-muted)' }}>
-                    {log.mortality} pcs
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span className={`badge ${log.mortality === 0 && log.doVal >= 4.5 ? 'badge-emerald' : 'badge-amber'}`}>
-                      {log.mortality === 0 && log.doVal >= 4.5 ? 'Optimal' : 'Attention'}
-                    </span>
+              {logs.length > 0 ? (
+                logs.map((log, lIdx) => (
+                  <tr key={lIdx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-main)' }}>
+                      {log.date} <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>({log.time})</span>
+                    </td>
+                    <td style={{ padding: '10px 12px', color: log.doVal < 4.0 ? '#f43f5e' : 'var(--text-main)', fontWeight: 600 }}>
+                      {log.doVal} ppm
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--text-main)' }}>{log.phVal}</td>
+                    <td style={{ padding: '10px 12px', color: log.feedCheck.includes('refused') ? '#f43f5e' : '#34d399' }}>
+                      {log.feedCheck}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: log.mortality > 0 ? '#fbbf24' : 'var(--text-muted)' }}>
+                      {log.mortality} pcs
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <span className={`badge ${log.mortality === 0 && log.doVal >= 4.5 ? 'badge-emerald' : 'badge-amber'}`}>
+                        {log.mortality === 0 && log.doVal >= 4.5 ? 'Optimal' : 'Attention'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                    📝 No daily water or feed test readings logged yet for this pond. Use the form above to record your morning DO, pH & check-tray clearance.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

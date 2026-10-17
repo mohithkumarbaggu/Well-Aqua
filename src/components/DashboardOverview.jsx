@@ -34,9 +34,15 @@ export default function DashboardOverview({
   const params = activePond?.waterParameters || {};
   const financials = activePond?.financials || {};
 
+  const hasRecordedParams = Boolean(
+    activePond?.hasCustomReport || 
+    (params.phMorning != null && params.phMorning !== '' && params.phMorning !== undefined) ||
+    (params.doMorning != null && params.doMorning !== '' && params.doMorning !== undefined)
+  );
+
   // Real-time status checks
-  const isDOLow = (params.doMorning || 5) < 4.0;
-  const isAmmoniaHigh = (params.tan || 0.1) > 0.5;
+  const isDOLow = hasRecordedParams && (params.doMorning || 5) < 4.0;
+  const isAmmoniaHigh = hasRecordedParams && (params.tan || 0.1) > 0.5;
 
   const [showMoltingDetails, setShowMoltingDetails] = useState(false);
   const [dismissedBroadcastIds, setDismissedBroadcastIds] = useState(() => {
@@ -419,9 +425,15 @@ export default function DashboardOverview({
             <span>{t.fcr}</span>
             <Scale size={16} color="var(--emerald)" />
           </div>
-          <div className="kpi-value">{activePond.fcr}</div>
+          <div className="kpi-value">{hasRecordedParams && activePond.fcr > 0 ? activePond.fcr : '--'}</div>
           <div className="kpi-subtitle">
-            <span style={{ color: '#34d399', fontWeight: 600 }}>★ Excellent</span> (Industry avg: 1.45)
+            {hasRecordedParams && activePond.fcr > 0 ? (
+              <>
+                <span style={{ color: '#34d399', fontWeight: 600 }}>★ Excellent</span> (Industry avg: 1.45)
+              </>
+            ) : (
+              <span style={{ color: 'var(--text-muted)' }}>Awaiting feeding cycle records</span>
+            )}
           </div>
         </div>
 
@@ -431,9 +443,15 @@ export default function DashboardOverview({
             <span>{t.survivalRate}</span>
             <Activity size={16} color="var(--cyan)" />
           </div>
-          <div className="kpi-value">{activePond.estimatedSurvivalRate}%</div>
+          <div className="kpi-value">
+            {hasRecordedParams && activePond.estimatedSurvivalRate > 0 ? `${activePond.estimatedSurvivalRate}%` : '--%'}
+          </div>
           <div className="kpi-subtitle">
-            Est. Surviving Count: {Math.round(activePond.stockedPL * (activePond.estimatedSurvivalRate / 100)).toLocaleString()}
+            {hasRecordedParams && activePond.estimatedSurvivalRate > 0 ? (
+              `Est. Surviving Count: ${Math.round(activePond.stockedPL * (activePond.estimatedSurvivalRate / 100)).toLocaleString()}`
+            ) : (
+              `Stocked: ${(activePond.stockedPL || 0).toLocaleString()} PL`
+            )}
           </div>
         </div>
 
@@ -443,9 +461,15 @@ export default function DashboardOverview({
             <span>{t.biomass}</span>
             <Droplets size={16} color="var(--cyan)" />
           </div>
-          <div className="kpi-value">{activePond.estimatedBiomassKg.toLocaleString()} <span style={{ fontSize: '1rem', fontWeight: 500 }}>kg</span></div>
+          <div className="kpi-value">
+            {hasRecordedParams && activePond.estimatedBiomassKg > 0 ? `${activePond.estimatedBiomassKg.toLocaleString()} kg` : '-- kg'}
+          </div>
           <div className="kpi-subtitle">
-            Total Feed Given: {activePond.totalFeedGivenKg.toLocaleString()} kg
+            {hasRecordedParams && activePond.totalFeedGivenKg > 0 ? (
+              `Total Feed Given: ${activePond.totalFeedGivenKg.toLocaleString()} kg`
+            ) : (
+              'Awaiting growth sampling'
+            )}
           </div>
         </div>
 
@@ -455,9 +479,15 @@ export default function DashboardOverview({
             <span>{t.avgWeight}</span>
             <Sparkles size={16} color="var(--amber)" />
           </div>
-          <div className="kpi-value">{activePond.currentAvgWeightGrams} <span style={{ fontSize: '1rem', fontWeight: 500 }}>g</span></div>
+          <div className="kpi-value">
+            {hasRecordedParams && activePond.currentAvgWeightGrams > 0 ? `${activePond.currentAvgWeightGrams} g` : '-- g'}
+          </div>
           <div className="kpi-subtitle">
-            ADG: <strong style={{ color: 'var(--amber)' }}>+{activePond.adg} g/day</strong> | Target: {activePond.targetHarvestWeightGrams}g
+            {hasRecordedParams && activePond.currentAvgWeightGrams > 0 ? (
+              <>ADG: <strong style={{ color: 'var(--amber)' }}>+{activePond.adg || 0.25} g/day</strong> | Target: {activePond.targetHarvestWeightGrams || 28}g</>
+            ) : (
+              `Target Harvest: ${activePond.targetHarvestWeightGrams || 28.0}g`
+            )}
           </div>
         </div>
       </div>
@@ -467,78 +497,180 @@ export default function DashboardOverview({
         
         {/* Water Chemistry Real-time Monitor */}
         <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FlaskConical size={20} color="var(--cyan)" />
-              <h3 style={{ fontSize: '1.2rem' }}>Pond Water Parameters</h3>
+              <h3 style={{ fontSize: '1.2rem', margin: 0 }}>Pond Water Parameters</h3>
             </div>
-            <button 
-              onClick={() => setCurrentTab('lab')}
-              style={{ color: 'var(--cyan)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
-            >
-              Request Lab Verification <ArrowUpRight size={14} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <button 
+                onClick={onOpenReportModal}
+                className="btn-secondary"
+                style={{ fontSize: '0.82rem', padding: '6px 12px', borderColor: '#38bdf8', color: 'var(--cyan)' }}
+              >
+                <span>✏️ Record Water Data</span>
+              </button>
+              <button 
+                onClick={() => setCurrentTab('lab')}
+                style={{ color: 'var(--cyan)', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer' }}
+              >
+                Request Lab Verification <ArrowUpRight size={14} />
+              </button>
+            </div>
           </div>
+
+          {/* Prompt banner when pond has no recorded parameters yet */}
+          {!hasRecordedParams && (
+            <div style={{
+              background: 'rgba(2, 132, 199, 0.08)',
+              border: '1px dashed #38bdf8',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              marginBottom: '16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.3rem' }}>🧪</span>
+                <div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    No Water Test Readings Recorded Yet
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Parameters will display here once you record your morning pH & DO readings or receive lab results.
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={onOpenReportModal}
+                className="btn-primary"
+                style={{ padding: '7px 14px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+              >
+                + Record pH & Water Readings
+              </button>
+            </div>
+          )}
 
           <div className="params-grid">
             
             <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>pH (Morning)</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>{params.phMorning}</div>
-              <div style={{ fontSize: '0.7rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                <CheckCircle2 size={12} /> Optimal (7.5 - 8.5)
+              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
+                {params.phMorning != null && params.phMorning !== '' ? params.phMorning : '--'}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: params.phMorning != null ? '#10b981' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
+                {params.phMorning != null ? (
+                  <>
+                    <CheckCircle2 size={12} /> Optimal (7.5 - 8.5)
+                  </>
+                ) : (
+                  <span>Awaiting Farmer Entry</span>
+                )}
               </div>
             </div>
 
             <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>DO (6:00 AM)</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 700, color: isDOLow ? '#f43f5e' : 'var(--text-main)', marginTop: '2px' }}>
-                {params.doMorning} <span style={{ fontSize: '0.75rem' }}>ppm</span>
+                {params.doMorning != null && params.doMorning !== '' ? (
+                  <>{params.doMorning} <span style={{ fontSize: '0.75rem' }}>ppm</span></>
+                ) : (
+                  '-- ppm'
+                )}
               </div>
-              <div style={{ fontSize: '0.7rem', color: isDOLow ? '#f43f5e' : '#10b981', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                {isDOLow ? <AlertTriangle size={12} /> : <CheckCircle2 size={12} />}
-                {isDOLow ? 'Low Oxygen!' : 'Safe Level (> 4.5)'}
+              <div style={{ fontSize: '0.7rem', color: params.doMorning != null ? (isDOLow ? '#f43f5e' : '#10b981') : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
+                {params.doMorning != null ? (
+                  <>
+                    {isDOLow ? <AlertTriangle size={12} /> : <CheckCircle2 size={12} />}
+                    {isDOLow ? 'Low Oxygen!' : 'Safe Level (> 4.5)'}
+                  </>
+                ) : (
+                  <span>Awaiting Farmer Entry</span>
+                )}
               </div>
             </div>
 
             <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Salinity</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                {params.salinity} <span style={{ fontSize: '0.75rem' }}>ppt</span>
+                {params.salinity != null && params.salinity !== '' ? (
+                  <>{params.salinity} <span style={{ fontSize: '0.75rem' }}>ppt</span></>
+                ) : (
+                  '-- ppt'
+                )}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                <CheckCircle2 size={12} /> Healthy Brackish
+              <div style={{ fontSize: '0.7rem', color: params.salinity != null ? '#10b981' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
+                {params.salinity != null ? (
+                  <>
+                    <CheckCircle2 size={12} /> Healthy Brackish
+                  </>
+                ) : (
+                  <span>Awaiting Farmer Entry</span>
+                )}
               </div>
             </div>
 
             <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Alkalinity</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                {params.alkalinity} <span style={{ fontSize: '0.75rem' }}>ppm</span>
+                {params.alkalinity != null && params.alkalinity !== '' ? (
+                  <>{params.alkalinity} <span style={{ fontSize: '0.75rem' }}>ppm</span></>
+                ) : (
+                  '-- ppm'
+                )}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                <CheckCircle2 size={12} /> High Buffer Capacity
+              <div style={{ fontSize: '0.7rem', color: params.alkalinity != null ? '#10b981' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
+                {params.alkalinity != null ? (
+                  <>
+                    <CheckCircle2 size={12} /> High Buffer Capacity
+                  </>
+                ) : (
+                  <span>Awaiting Farmer Entry</span>
+                )}
               </div>
             </div>
 
             <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Ammonia (TAN)</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 700, color: isAmmoniaHigh ? '#f43f5e' : 'var(--text-main)', marginTop: '2px' }}>
-                {params.tan} <span style={{ fontSize: '0.75rem' }}>mg/L</span>
+                {params.tan != null && params.tan !== '' ? (
+                  <>{params.tan} <span style={{ fontSize: '0.75rem' }}>mg/L</span></>
+                ) : (
+                  '-- mg/L'
+                )}
               </div>
-              <div style={{ fontSize: '0.7rem', color: isAmmoniaHigh ? '#f43f5e' : '#10b981', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                {isAmmoniaHigh ? <AlertTriangle size={12} /> : <CheckCircle2 size={12} />}
-                {isAmmoniaHigh ? 'Spike Detected' : 'Safe (< 0.5)'}
+              <div style={{ fontSize: '0.7rem', color: params.tan != null ? (isAmmoniaHigh ? '#f43f5e' : '#10b981') : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
+                {params.tan != null ? (
+                  <>
+                    {isAmmoniaHigh ? <AlertTriangle size={12} /> : <CheckCircle2 size={12} />}
+                    {isAmmoniaHigh ? 'Spike Detected' : 'Safe (< 0.5)'}
+                  </>
+                ) : (
+                  <span>Awaiting Farmer Entry</span>
+                )}
               </div>
             </div>
 
             <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Nitrite (NO2-)</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-                {params.no2} <span style={{ fontSize: '0.75rem' }}>mg/L</span>
+                {params.no2 != null && params.no2 !== '' ? (
+                  <>{params.no2} <span style={{ fontSize: '0.75rem' }}>mg/L</span></>
+                ) : (
+                  '-- mg/L'
+                )}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                <CheckCircle2 size={12} /> Non-toxic
+              <div style={{ fontSize: '0.7rem', color: params.no2 != null ? '#10b981' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
+                {params.no2 != null ? (
+                  <>
+                    <CheckCircle2 size={12} /> Non-toxic
+                  </>
+                ) : (
+                  <span>Awaiting Farmer Entry</span>
+                )}
               </div>
             </div>
 
@@ -546,7 +678,7 @@ export default function DashboardOverview({
 
           <div style={{ marginTop: '18px', padding: '12px 16px', background: 'rgba(6, 182, 212, 0.08)', borderRadius: '10px', borderLeft: '3px solid var(--cyan)' }}>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0 }}>
-              <strong>Water Color & Plankton:</strong> {params.waterColor}. Secchi disc transparency measured at <strong>32 cm</strong>.
+              <strong>Water Color & Plankton:</strong> {hasRecordedParams ? (params.waterColor || 'Good diatom bloom') : 'Awaiting farmer reading'}. {hasRecordedParams ? 'Secchi disc transparency measured at 32 cm.' : 'Use Record Water Data to enter transparency and bloom status.'}
             </p>
           </div>
         </div>

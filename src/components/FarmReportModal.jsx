@@ -26,23 +26,23 @@ export default function FarmReportModal({
     stockingDate: activePond.stockingDate || new Date().toISOString().split('T')[0],
     doc: activePond.doc || 1,
     stockedPL: activePond.stockedPL || 100000,
-    areaAcres: activePond.areaAcres || Math.round(activePond.areaHectares * 2.471 * 10) / 10 || 2.0,
-    currentAvgWeightGrams: activePond.currentAvgWeightGrams || 5.0,
+    areaAcres: activePond.areaAcres || (activePond.areaHectares ? Math.round(activePond.areaHectares * 2.471 * 10) / 10 : 2.0),
+    currentAvgWeightGrams: activePond.currentAvgWeightGrams > 0 ? activePond.currentAvgWeightGrams : '',
     targetHarvestWeightGrams: activePond.targetHarvestWeightGrams || 28.0,
-    estimatedSurvivalRate: activePond.estimatedSurvivalRate || 85.0,
-    totalFeedGivenKg: activePond.totalFeedGivenKg || 0,
+    estimatedSurvivalRate: activePond.estimatedSurvivalRate > 0 ? activePond.estimatedSurvivalRate : '',
+    totalFeedGivenKg: activePond.totalFeedGivenKg > 0 ? activePond.totalFeedGivenKg : '',
     // Water parameters
-    phMorning: activePond.waterParameters?.phMorning || 7.8,
-    phEvening: activePond.waterParameters?.phEvening || 8.3,
-    doMorning: activePond.waterParameters?.doMorning || 5.2,
-    doEvening: activePond.waterParameters?.doEvening || 6.8,
-    salinity: activePond.waterParameters?.salinity || 16.0,
-    alkalinity: activePond.waterParameters?.alkalinity || 140,
-    tan: activePond.waterParameters?.tan || 0.15,
-    temperature: activePond.waterParameters?.temperature || 29.0,
+    phMorning: activePond.waterParameters?.phMorning != null ? activePond.waterParameters.phMorning : '',
+    phEvening: activePond.waterParameters?.phEvening != null ? activePond.waterParameters.phEvening : '',
+    doMorning: activePond.waterParameters?.doMorning != null ? activePond.waterParameters.doMorning : '',
+    doEvening: activePond.waterParameters?.doEvening != null ? activePond.waterParameters.doEvening : '',
+    salinity: activePond.waterParameters?.salinity != null ? activePond.waterParameters.salinity : '',
+    alkalinity: activePond.waterParameters?.alkalinity != null ? activePond.waterParameters.alkalinity : '',
+    tan: activePond.waterParameters?.tan != null ? activePond.waterParameters.tan : '',
+    temperature: activePond.waterParameters?.temperature != null ? activePond.waterParameters.temperature : '',
     waterColor: activePond.waterParameters?.waterColor || 'Light Green (Healthy Bloom)',
     // Financials
-    totalInvestment: activePond.financials?.totalInvestment || 50000
+    totalInvestment: activePond.financials?.totalInvestment || ''
   });
 
   const handleChange = (field, value) => {
@@ -53,8 +53,8 @@ export default function FarmReportModal({
     e.preventDefault();
 
     const stockedCount = Number(formData.stockedPL) || 0;
-    const survivalPct = Number(formData.estimatedSurvivalRate) || 85;
-    const avgWeight = Number(formData.currentAvgWeightGrams) || 1;
+    const survivalPct = formData.estimatedSurvivalRate !== '' ? Number(formData.estimatedSurvivalRate) : 85;
+    const avgWeight = formData.currentAvgWeightGrams !== '' ? Number(formData.currentAvgWeightGrams) : 1;
     const feedKg = Number(formData.totalFeedGivenKg) || 0;
 
     // Calculate biomass: (Surviving count * weight in grams) / 1000
@@ -75,6 +75,7 @@ export default function FarmReportModal({
       stockingDate: formData.stockingDate,
       doc: Number(formData.doc) || 1,
       hasCustomReport: true,
+      hasRecordedWaterParams: formData.phMorning !== '' || formData.doMorning !== '',
       isNewBatch: false,
       areaAcres: acres,
       areaHectares: hectares,
@@ -87,16 +88,16 @@ export default function FarmReportModal({
       totalFeedGivenKg: feedKg,
       fcr: fcr,
       waterParameters: {
-        temperature: Number(formData.temperature) || 29,
-        phMorning: Number(formData.phMorning) || 7.8,
-        phEvening: Number(formData.phEvening) || 8.3,
-        doMorning: Number(formData.doMorning) || 5.0,
-        doEvening: Number(formData.doEvening) || 6.5,
-        salinity: Number(formData.salinity) || 15,
-        alkalinity: Number(formData.alkalinity) || 135,
-        tan: Number(formData.tan) || 0.1,
-        no2: 0.05,
-        waterColor: formData.waterColor
+        temperature: formData.temperature !== '' ? Number(formData.temperature) : null,
+        phMorning: formData.phMorning !== '' ? Number(formData.phMorning) : null,
+        phEvening: formData.phEvening !== '' ? Number(formData.phEvening) : null,
+        doMorning: formData.doMorning !== '' ? Number(formData.doMorning) : null,
+        doEvening: formData.doEvening !== '' ? Number(formData.doEvening) : null,
+        salinity: formData.salinity !== '' ? Number(formData.salinity) : null,
+        alkalinity: formData.alkalinity !== '' ? Number(formData.alkalinity) : null,
+        tan: formData.tan !== '' ? Number(formData.tan) : null,
+        no2: 0.02,
+        waterColor: formData.waterColor || 'Light Green (Healthy Bloom)'
       },
       financials: {
         ...activePond.financials,
@@ -268,7 +269,7 @@ export default function FarmReportModal({
                   onChange={(e) => handleChange('doMorning', e.target.value)}
                   className="input-field"
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.86rem' }}
-                  required
+                  placeholder="e.g. 5.2 (Safe > 4.5)"
                 />
               </div>
 
@@ -297,7 +298,7 @@ export default function FarmReportModal({
                   onChange={(e) => handleChange('phMorning', e.target.value)}
                   className="input-field"
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.86rem' }}
-                  required
+                  placeholder="e.g. 7.8 (Optimal 7.5 - 8.5)"
                 />
               </div>
 
@@ -312,6 +313,7 @@ export default function FarmReportModal({
                   onChange={(e) => handleChange('phEvening', e.target.value)}
                   className="input-field"
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.86rem' }}
+                  placeholder="e.g. 8.2"
                 />
               </div>
 
@@ -326,7 +328,7 @@ export default function FarmReportModal({
                   onChange={(e) => handleChange('salinity', e.target.value)}
                   className="input-field"
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.86rem' }}
-                  required
+                  placeholder="e.g. 15.0 ppt"
                 />
               </div>
 
@@ -340,7 +342,7 @@ export default function FarmReportModal({
                   onChange={(e) => handleChange('alkalinity', e.target.value)}
                   className="input-field"
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.86rem' }}
-                  required
+                  placeholder="e.g. 130 ppm"
                 />
               </div>
 
@@ -355,7 +357,7 @@ export default function FarmReportModal({
                   onChange={(e) => handleChange('tan', e.target.value)}
                   className="input-field"
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.86rem' }}
-                  required
+                  placeholder="e.g. 0.05 mg/L"
                 />
               </div>
 
@@ -370,6 +372,7 @@ export default function FarmReportModal({
                   onChange={(e) => handleChange('temperature', e.target.value)}
                   className="input-field"
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', fontSize: '0.86rem' }}
+                  placeholder="e.g. 29.0 °C"
                 />
               </div>
             </div>
