@@ -97,7 +97,17 @@ export default function AdminPortal({
       const saved = localStorage.getItem('well_aqua_admin_broadcasts');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(
+            b => b.id !== 'BC-2026-101' && 
+                 b.id !== 'BC-2026-102' && 
+                 b.id !== 'BC-2026-103' && 
+                 !b.title?.toLowerCase().includes('white spot') && 
+                 !b.title?.toLowerCase().includes('export subsidy')
+          );
+          localStorage.setItem('well_aqua_admin_broadcasts', JSON.stringify(cleaned));
+          return cleaned;
+        }
       }
     } catch (e) {}
     return INITIAL_ADMIN_BROADCASTS;

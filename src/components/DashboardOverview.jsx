@@ -39,21 +39,46 @@ export default function DashboardOverview({
   const isAmmoniaHigh = (params.tan || 0.1) > 0.5;
 
   const [showMoltingDetails, setShowMoltingDetails] = useState(false);
-  const [dismissedBroadcastIds, setDismissedBroadcastIds] = useState([]);
+  const [dismissedBroadcastIds, setDismissedBroadcastIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('well_aqua_dismissed_broadcasts');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
 
-  // Read broadcasts dynamically
+  // Read broadcasts dynamically and filter out old mock advisories
   const [broadcasts, setBroadcasts] = useState(() => {
     try {
       const saved = localStorage.getItem('well_aqua_admin_broadcasts');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(
+            b => b.id !== 'BC-2026-101' && 
+                 b.id !== 'BC-2026-102' && 
+                 b.id !== 'BC-2026-103' && 
+                 !b.title?.toLowerCase().includes('white spot') && 
+                 !b.title?.toLowerCase().includes('export subsidy')
+          );
+          localStorage.setItem('well_aqua_admin_broadcasts', JSON.stringify(cleaned));
+          return cleaned;
+        }
       }
     } catch (e) {}
     return INITIAL_ADMIN_BROADCASTS;
   });
 
   const activeBroadcasts = broadcasts.filter(b => b.active && !dismissedBroadcastIds.includes(b.id));
+
+  const handleDismissBroadcast = (id) => {
+    const updated = [...dismissedBroadcastIds, id];
+    setDismissedBroadcastIds(updated);
+    try {
+      localStorage.setItem('well_aqua_dismissed_broadcasts', JSON.stringify(updated));
+    } catch (e) {}
+  };
 
   const farmerName = user?.name || 'Mohith Kumar Baggu';
 
@@ -143,7 +168,7 @@ export default function DashboardOverview({
                 </div>
 
                 <button
-                  onClick={() => setDismissedBroadcastIds(prev => [...prev, bc.id])}
+                  onClick={() => handleDismissBroadcast(bc.id)}
                   style={{
                     background: 'transparent',
                     border: 'none',

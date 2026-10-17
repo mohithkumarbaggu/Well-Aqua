@@ -210,47 +210,7 @@ export const INITIAL_ADMIN_PHARMACY_ORDERS = [
   }
 ];
 
-export const INITIAL_ADMIN_BROADCASTS = [
-  {
-    id: 'BC-2026-101',
-    title: '⚠️ Cyclone & Sudden Heavy Rainfall Advisory (West Godavari & Krishna Districts)',
-    category: 'Weather & Monsoon Alert',
-    priority: 'Urgent',
-    targetDistrict: 'West Godavari & Krishna Districts',
-    date: '2026-10-17',
-    time: '09:30 AM',
-    author: 'Admin Central Command',
-    content: 'IMD reports cyclonic depression approaching Andhra coast. High runoff rainfall expected in Bhimavaram, Machilipatnam, and Kaikaluru. Actions: 1) Run aerators continuously to prevent thermocline and DO stratification. 2) Stop feeding during heavy downpours. 3) Apply 25kg Agricultural Lime per acre along pond dykes to neutralize acidic runoff rain.',
-    readCount: 142,
-    active: true
-  },
-  {
-    id: 'BC-2026-102',
-    title: '🦐 White Spot & EHP Bio-Security Protocol Update',
-    category: 'Disease Prevention Advisory',
-    priority: 'High',
-    targetDistrict: 'All Coastal Andhra Districts',
-    date: '2026-10-15',
-    time: '02:15 PM',
-    author: 'Chief Aquatic Pathologist',
-    content: 'Early season temperature drops trigger dormant WSSV. Ensure all feed trays are inspected twice daily. Do not allow untreated canal water pumping during high tide if neighboring farms report sudden mortality. PCR testing available at doorstep through Well Aqua Diagnostic Labs.',
-    readCount: 298,
-    active: true
-  },
-  {
-    id: 'BC-2026-103',
-    title: '🏛️ MPEDA & CAA Export Subsidy Registration Deadline',
-    category: 'Government Schemes & Compliance',
-    priority: 'Standard',
-    targetDistrict: 'All Registered Farmers',
-    date: '2026-10-10',
-    time: '11:00 AM',
-    author: 'Compliance Officer',
-    content: 'Farmers possessing valid CAA licenses are eligible for 40% capital subsidy on solar aerators and digital DO sensors under PMMSY scheme. Submit pond verification numbers before end of month.',
-    readCount: 380,
-    active: true
-  }
-];
+export const INITIAL_ADMIN_BROADCASTS = [];
 
 export const INITIAL_DISPATCHED_LAB_READINGS = [
   {
