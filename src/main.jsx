@@ -109,3 +109,28 @@ createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </StrictMode>,
 );
+
+// Register Service Worker for Progressive Web App (PWA / APK-like installation)
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(
+      (reg) => {
+        console.log('✅ Well Aqua PWA Service Worker Registered:', reg.scope);
+      },
+      (err) => {
+        console.warn('PWA Service Worker Registration notice:', err);
+      }
+    );
+  });
+}
+
+// Global listener for Chrome PWA install prompt (WebAPK on Android)
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window.deferredInstallPrompt = e;
+    window.dispatchEvent(new CustomEvent('wellaqua:installable'));
+    console.log('📱 Chrome WebAPK / PWA installation prompt ready');
+  });
+}
+

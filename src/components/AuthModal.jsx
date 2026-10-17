@@ -13,10 +13,14 @@ import {
   ArrowRight,
   Cloud,
   ChevronRight,
-  Fish
+  Fish,
+  Eye,
+  EyeOff,
+  Download
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { generateFarmerUserId, syncUserToSupabase } from '../utils/userIdGenerator';
+import { generateFarmerUserId, syncUserToSupabase, authenticateFarmer } from '../utils/userIdGenerator';
+import InstallAppModal from './InstallAppModal';
 
 export default function AuthModal({ 
   isOpen, 
@@ -26,19 +30,17 @@ export default function AuthModal({
   onAdminLoginSuccess
 }) {
   const [mode, setMode] = useState(initialMode); // 'login' | 'signup'
-  const [loginMethod, setLoginMethod] = useState('otp'); // 'otp' | 'password'
+  const [showInstallModal, setShowInstallModal] = useState(false);
 
   // Admin Passcode State
   const [showAdminPasscode, setShowAdminPasscode] = useState(false);
   const [adminPasscode, setAdminPasscode] = useState('');
   const [adminPasscodeError, setAdminPasscodeError] = useState('');
 
-  // Login form state
-  const [phone, setPhone] = useState('9848012345');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [email, setEmail] = useState('mohith.baggu@wellaqua.farm');
-  const [password, setPassword] = useState('farmer@123');
+  // Login form state (Passcode created in signup)
+  const [phoneOrUserId, setPhoneOrUserId] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Sign up form state
   const [signupForm, setSignupForm] = useState({
@@ -58,37 +60,6 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  // 1-Click Demo Login
-  const handleDemoLogin = () => {
-    setIsLoading(true);
-    const demoUserId = 'AQ-AP-1234-9921';
-    const demoFarmer = {
-      id: 'farmer_01',
-      userId: demoUserId,
-      farmerId: demoUserId,
-      name: 'Mohith Kumar Baggu',
-      farmName: 'Srimannarayana Coastal Aqua Farm',
-      phone: '+91 98480 12345',
-      email: 'mohith.baggu@wellaqua.farm',
-      pin: '1234',
-      location: 'Bhimavaram, West Godavari District, Andhra Pradesh',
-      caaRegNo: 'CAA/2024/AP/WG/48291',
-      mpedaId: 'MPEDA-IND-AP-9921',
-      totalAreaAcres: 6.5,
-      totalPondsCount: 3,
-      primarySpecies: 'Vannamei Shrimp'
-    };
-
-    // Auto-sync login details to Supabase
-    syncUserToSupabase(demoFarmer);
-
-    setTimeout(() => {
-      setIsLoading(false);
-      onLoginSuccess(demoFarmer);
-      onClose();
-    }, 350);
-  };
-
   const handleAdminPasscodeSubmit = (e) => {
     e.preventDefault();
     if (adminPasscode.trim() === '9900') {
@@ -101,122 +72,37 @@ export default function AuthModal({
     }
   };
 
-  // Send OTP
-  const handleSendOtp = (e) => {
+  // Farmer Passcode Login
+  const handleFarmerLogin = async (e) => {
     e.preventDefault();
-    if (!phone || phone.length < 10) {
-      setErrorMessage('Please enter a valid 10-digit mobile number');
+    if (!phoneOrUserId || !phoneOrUserId.trim()) {
+      setErrorMessage('Please enter your Mobile Number or Farmer User ID (రైతు మొబైల్ / యూజర్ ID)');
       return;
     }
+    if (!password || !password.trim()) {
+      setErrorMessage('Please enter the password / passcode created during signup (రహస్య పాస్‌కోడ్)');
+      return;
+    }
+
+    setIsLoading(true);
     setErrorMessage('');
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setOtpSent(true);
-      setOtp('4829'); // Pre-fill convenience
-    }, 400);
-  };
 
-  // Verify OTP
-  const handleVerifyOtp = (e) => {
-    e.preventDefault();
-    if (!otp || otp.length < 4) {
-      setErrorMessage('Please enter the 4-digit OTP (Try 4829)');
-      return;
-    }
-    setIsLoading(true);
-    const generatedUserId = generateFarmerUserId(phone, phone === '9848012345' ? 'Mohith Kumar Baggu' : 'Aqua Farmer', 'Bhimavaram, Andhra Pradesh');
-    const otpFarmer = {
-      id: 'farmer_otp_' + Date.now(),
-      userId: generatedUserId,
-      farmerId: generatedUserId,
-      name: phone === '9848012345' ? 'Mohith Kumar Baggu' : 'Aqua Farmer (+91 ' + phone + ')',
-      farmName: 'Coastal Sunrise Aqua Farm',
-      phone: '+91 ' + phone,
-      email: 'farmer.' + phone.slice(-4) + '@gmail.com',
-      pin: otp || '4829',
-      location: 'Bhimavaram, Andhra Pradesh',
-      caaRegNo: 'CAA/2024/AP/WG/48291',
-      mpedaId: 'MPEDA-IND-AP-9921',
-      totalAreaAcres: 5.0,
-      totalPondsCount: 3,
-      primarySpecies: 'Vannamei Shrimp'
-    };
-
-    // Auto-sync login details to Supabase
-    syncUserToSupabase(otpFarmer);
-
-    setTimeout(() => {
-      setIsLoading(false);
-      onLoginSuccess(otpFarmer);
-      onClose();
-    }, 400);
-  };
-
-  // Password Login
-  const handlePasswordLogin = async (e) => {
-    e.preventDefault();
-    if (!email) {
-      setErrorMessage('Please enter your email or phone number');
-      return;
-    }
-    if (!password) {
-      setErrorMessage('Please enter your password');
-      return;
-    }
-
-    setIsLoading(true);
-
-    // Try Supabase auth if email is provided
     try {
-      if (isSupabaseConfigured && email.includes('@')) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password
-        });
-
-        if (!error && data?.user) {
-          const userMeta = data.user.user_metadata || {};
-          setIsLoading(false);
-          onLoginSuccess({
-            id: data.user.id,
-            name: userMeta.name || email.split('@')[0],
-            farmName: userMeta.farmName || 'Srimannarayana Coastal Aqua Farm',
-            phone: userMeta.phone || '+91 98480 12345',
-            email: data.user.email,
-            location: userMeta.location || 'Bhimavaram, Andhra Pradesh',
-            caaRegNo: userMeta.caaRegNo || 'CAA/2024/AP/WG/48291',
-            mpedaId: userMeta.mpedaId || 'MPEDA-IND-AP-9921',
-            totalAreaAcres: userMeta.totalAreaAcres || 6.5,
-            totalPondsCount: userMeta.totalPondsCount || 3,
-            primarySpecies: userMeta.primarySpecies || 'Vannamei Shrimp'
-          });
-          onClose();
-          return;
-        }
+      const result = await authenticateFarmer(phoneOrUserId, password);
+      if (result.success && result.user) {
+        setIsLoading(false);
+        onLoginSuccess(result.user);
+        onClose();
+        return;
+      } else {
+        setIsLoading(false);
+        setErrorMessage(result.message || 'Incorrect passcode. Please enter the password you created during signup.');
       }
     } catch (err) {
-      console.warn('Supabase auth attempt:', err);
-    }
-
-    // Default seamless login
-    setTimeout(() => {
+      console.error('Farmer login error:', err);
       setIsLoading(false);
-      onLoginSuccess({
-        id: 'farmer_01',
-        name: 'Mohith Kumar Baggu',
-        farmName: 'Srimannarayana Coastal Aqua Farm',
-        phone: '+91 98480 12345',
-        email: email,
-        location: 'Bhimavaram, West Godavari District, Andhra Pradesh',
-        caaRegNo: 'CAA/2024/AP/WG/48291',
-        mpedaId: 'MPEDA-IND-AP-9921',
-        totalAreaAcres: 6.5,
-        totalPondsCount: 3,
-        primarySpecies: 'Vannamei Shrimp'
-      });
-      onClose();
-    }, 400);
+      setErrorMessage('Authentication error. Please verify your connection.');
+    }
   };
 
   // Sign Up
@@ -543,163 +429,94 @@ export default function AuthModal({
           {mode === 'login' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
-              {/* Method Toggle: OTP vs Password */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '0.8rem' }}>
-                <button
-                  type="button"
-                  onClick={() => { setLoginMethod('otp'); setErrorMessage(''); }}
-                  style={{
-                    color: loginMethod === 'otp' ? '#0284c7' : '#64748b',
-                    fontWeight: loginMethod === 'otp' ? 700 : 500,
-                    borderBottom: loginMethod === 'otp' ? '2px solid #0284c7' : '2px solid transparent',
-                    paddingBottom: '2px'
-                  }}
-                >
-                  📱 Mobile OTP
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setLoginMethod('password'); setErrorMessage(''); }}
-                  style={{
-                    color: loginMethod === 'password' ? '#0284c7' : '#64748b',
-                    fontWeight: loginMethod === 'password' ? 700 : 500,
-                    borderBottom: loginMethod === 'password' ? '2px solid #0284c7' : '2px solid transparent',
-                    paddingBottom: '2px'
-                  }}
-                >
-                  🔑 Email & Password
-                </button>
+              {/* Chrome APK Install Banner */}
+              <div 
+                onClick={() => setShowInstallModal(true)}
+                style={{
+                  background: 'rgba(2, 132, 199, 0.08)',
+                  border: '1px solid rgba(2, 132, 199, 0.25)',
+                  borderRadius: '12px',
+                  padding: '9px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Download size={16} color="#0284c7" />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0369a1' }}>
+                    Install Well Aqua App (Chrome APK)
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.74rem', color: '#0284c7', fontWeight: 700 }}>
+                  Install 📲
+                </span>
               </div>
 
-              {loginMethod === 'otp' ? (
-                /* Mobile OTP Login Form */
-                <form onSubmit={otpSent ? handleVerifyOtp : handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div className="auth-input-group">
-                    <label className="auth-input-label">
-                      <span>Phone Number</span>
-                    </label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <div style={{
-                        padding: '11px 12px',
-                        background: '#f8fafc',
-                        border: '1.5px solid var(--border-subtle)',
-                        borderRadius: '12px',
-                        fontWeight: 700,
-                        fontSize: '0.88rem',
-                        color: '#475569',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}>
-                        🇮🇳 +91
-                      </div>
-                      <input 
-                        type="tel"
-                        maxLength={10}
-                        placeholder="10-digit mobile number"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                        className="auth-input"
-                        style={{ flex: 1, letterSpacing: '0.04em', fontWeight: 600 }}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {otpSent && (
-                    <div style={{
-                      background: 'rgba(2, 132, 199, 0.05)',
-                      border: '1.5px solid #bae6fd',
-                      borderRadius: '12px',
-                      padding: '12px 14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0284c7' }}>
-                          Enter 4-Digit Code
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700, background: '#ecfdf5', padding: '2px 6px', borderRadius: '4px' }}>
-                          Demo OTP: 4829
-                        </span>
-                      </div>
-                      <input 
-                        type="text"
-                        maxLength={4}
-                        placeholder="4829"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                        className="auth-input"
-                        style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.3em', fontWeight: 800 }}
-                        autoFocus
-                        required
-                      />
-                    </div>
-                  )}
-
-                  <button 
-                    type="submit" 
-                    className="btn-primary" 
-                    disabled={isLoading}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      fontSize: '0.92rem',
-                      borderRadius: '12px',
-                      justifyContent: 'center',
-                      fontWeight: 700
-                    }}
-                  >
-                    {isLoading ? 'Verifying...' : otpSent ? 'Verify & Sign In' : 'Get OTP Code'}
-                  </button>
-                </form>
-              ) : (
-                /* Password Login Form */
-                <form onSubmit={handlePasswordLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div className="auth-input-group">
-                    <label className="auth-input-label">Email Address</label>
+              {/* Direct Passcode Login Form */}
+              <form onSubmit={handleFarmerLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="auth-input-group">
+                  <label className="auth-input-label">Mobile Number or Farmer ID (రైతు ID)</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <input 
                       type="text"
-                      placeholder="mohith.baggu@wellaqua.farm"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. 9848012345 or AQ-AP-1234-9921"
+                      value={phoneOrUserId}
+                      onChange={(e) => setPhoneOrUserId(e.target.value)}
                       className="auth-input"
                       required
+                      autoFocus
                     />
                   </div>
+                </div>
 
-                  <div className="auth-input-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="auth-input-label">Password</label>
-                      <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: 600 }}>Default: farmer@123</span>
-                    </div>
+                <div className="auth-input-group">
+                  <label className="auth-input-label">Password / Passcode (రహస్య పాస్‌కోడ్)</label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <input 
-                      type="password"
-                      placeholder="••••••••"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter the passcode created during signup"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="auth-input"
+                      style={{ paddingRight: '40px' }}
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        padding: '4px'
+                      }}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
+                </div>
 
-                  <button 
-                    type="submit" 
-                    className="btn-primary" 
-                    disabled={isLoading}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      fontSize: '0.92rem',
-                      borderRadius: '12px',
-                      justifyContent: 'center',
-                      fontWeight: 700
-                    }}
-                  >
-                    {isLoading ? 'Signing In...' : 'Sign In to Farm'}
-                  </button>
-                </form>
-              )}
+                <button 
+                  type="submit" 
+                  className="btn-primary" 
+                  disabled={isLoading}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    fontSize: '0.92rem',
+                    borderRadius: '12px',
+                    justifyContent: 'center',
+                    fontWeight: 700
+                  }}
+                >
+                  {isLoading ? 'Verifying Passcode...' : 'Sign In to Farm'}
+                </button>
+              </form>
 
               {/* ================= ADMIN PASSCODE LOGIN (DISCREET LINK) ================= */}
               <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '0.5px solid rgba(60, 60, 67, 0.12)', display: 'flex', justifyContent: 'center' }}>
@@ -914,16 +731,19 @@ export default function AuthModal({
               </div>
 
               <div className="auth-input-group">
-                <label className="auth-input-label">4-Digit Security PIN (పాస్‌వర్డ్)</label>
+                <label className="auth-input-label">Create Password / Passcode (రహస్య పాస్‌కోడ్)</label>
                 <input 
                   type="password"
-                  maxLength={6}
-                  placeholder="e.g. 1234"
+                  maxLength={16}
+                  placeholder="Create your login passcode (e.g. 1234)"
                   value={signupForm.pin}
                   onChange={(e) => setSignupForm({ ...signupForm, pin: e.target.value })}
                   className="auth-input"
                   required
                 />
+                <p style={{ margin: '3px 0 0', fontSize: '0.73rem', color: '#0284c7' }}>
+                  🔒 The passcode you create here will be used to log in.
+                </p>
               </div>
 
               <button 
@@ -981,6 +801,12 @@ export default function AuthModal({
           </div>
 
         </div>
+
+        {/* ================= PWA INSTALL MODAL ================= */}
+        <InstallAppModal 
+          isOpen={showInstallModal} 
+          onClose={() => setShowInstallModal(false)} 
+        />
 
       </div>
     </div>

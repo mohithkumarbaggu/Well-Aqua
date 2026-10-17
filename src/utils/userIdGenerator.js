@@ -70,6 +70,21 @@ export async function syncUserToSupabase(userData) {
   };
 
   try {
+    // Also save in localStorage for instant offline access and quick fallback
+    try {
+      const storedRaw = localStorage.getItem('wellaqua_registered_users');
+      const storedUsers = storedRaw ? JSON.parse(storedRaw) : [];
+      const existingIdx = storedUsers.findIndex(u => u.user_id === userId || u.phone === loginPayload.phone || u.phone === cleanPhone);
+      if (existingIdx >= 0) {
+        storedUsers[existingIdx] = { ...storedUsers[existingIdx], ...loginPayload };
+      } else {
+        storedUsers.push(loginPayload);
+      }
+      localStorage.setItem('wellaqua_registered_users', JSON.stringify(storedUsers));
+    } catch (lsErr) {
+      console.warn('LocalStorage user sync note:', lsErr);
+    }
+
     // 1. Save to dedicated 'user_logins' credentials table
     const { error: loginErr } = await supabase
       .from('user_logins')
@@ -110,11 +125,169 @@ export async function syncUserToSupabase(userData) {
       }
     }
 
-    return { success: true, userId };
+    return { success: true, userId, user: loginPayload };
   } catch (err) {
     console.warn('Supabase sync exception:', err);
     return { success: false, error: err.message };
   }
+}
+
+/**
+ * Validates farmer credentials against Supabase user_logins table
+ * and local registry using the password/passcode created during signup.
+ */
+export async function authenticateFarmer(phoneOrUserId, passcode) {
+  if (!phoneOrUserId || !phoneOrUserId.trim()) {
+    return { success: false, message: 'Please enter your Mobile Number or Farmer User ID.' };
+  }
+  if (!passcode || !passcode.trim()) {
+    return { success: false, message: 'Please enter the password / passcode created during signup.' };
+  }
+
+  const rawInput = phoneOrUserId.trim();
+  const cleanPhone = rawInput.replace(/\D/g, '');
+  const enteredPasscode = passcode.trim();
+
+  // 1. Try querying Supabase user_logins table
+  if (isSupabaseConfigured) {
+    try {
+      const filterConditions = [];
+      if (cleanPhone && cleanPhone.length >= 7) {
+        filterConditions.push(`phone.ilike.%${cleanPhone.slice(-10)}%`);
+      }
+      filterConditions.push(`user_id.ilike.${rawInput}`);
+      filterConditions.push(`email.ilike.${rawInput}`);
+
+      const { data, error } = await supabase
+        .from('user_logins')
+        .select('*')
+        .or(filterConditions.join(','));
+
+      if (!error && data && data.length > 0) {
+        const matched = data.find(
+          row => String(row.pin_code || '').trim() === enteredPasscode
+        );
+
+        if (matched) {
+          // Standardize returned farmer object
+          return {
+            success: true,
+            user: {
+              id: matched.user_id || matched.id,
+              userId: matched.user_id || matched.id,
+              farmerId: matched.user_id || matched.id,
+              name: matched.full_name,
+              farmName: matched.farm_name,
+              phone: matched.phone,
+              email: matched.email,
+              location: matched.location,
+              totalAreaAcres: parseFloat(matched.total_acres) || 5.0,
+              totalPondsCount: parseInt(matched.total_ponds, 10) || 3,
+              primarySpecies: matched.primary_species || 'Vannamei Shrimp',
+              caaRegNo: 'CAA/2025/REG/' + Math.floor(10000 + Math.random() * 90000),
+              mpedaId: 'MPEDA-REG-' + Math.floor(1000 + Math.random() * 9000)
+            }
+          };
+        } else {
+          return {
+            success: false,
+            reason: 'WRONG_PASSCODE',
+            message: 'Incorrect passcode. Please enter the password you created during signup.'
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase authentication check note:', err);
+    }
+  }
+
+  // 2. Check localStorage fallback
+  try {
+    const storedRaw = localStorage.getItem('wellaqua_registered_users');
+    const storedUsers = storedRaw ? JSON.parse(storedRaw) : [];
+
+    const foundInLocal = storedUsers.find(u => {
+      const uPhone = (u.phone || '').replace(/\D/g, '');
+      const uUserId = (u.user_id || u.userId || '').toLowerCase();
+      const uEmail = (u.email || '').toLowerCase();
+      const inputLower = rawInput.toLowerCase();
+
+      return (
+        (cleanPhone && cleanPhone.length >= 7 && uPhone.includes(cleanPhone.slice(-10))) ||
+        uUserId === inputLower ||
+        uEmail === inputLower
+      );
+    });
+
+    if (foundInLocal) {
+      const userPin = String(foundInLocal.pin_code || foundInLocal.pin || '').trim();
+      if (userPin === enteredPasscode) {
+        return {
+          success: true,
+          user: {
+            id: foundInLocal.user_id || foundInLocal.id || 'farmer_user',
+            userId: foundInLocal.user_id || foundInLocal.id,
+            farmerId: foundInLocal.user_id || foundInLocal.id,
+            name: foundInLocal.full_name || foundInLocal.name,
+            farmName: foundInLocal.farm_name || foundInLocal.farmName,
+            phone: foundInLocal.phone,
+            email: foundInLocal.email,
+            location: foundInLocal.location,
+            totalAreaAcres: parseFloat(foundInLocal.total_acres || foundInLocal.totalAreaAcres) || 5.0,
+            totalPondsCount: parseInt(foundInLocal.total_ponds || foundInLocal.totalPondsCount, 10) || 3,
+            primarySpecies: foundInLocal.primary_species || foundInLocal.primarySpecies || 'Vannamei Shrimp',
+            caaRegNo: foundInLocal.caaRegNo || 'CAA/2025/REG/48291',
+            mpedaId: foundInLocal.mpedaId || 'MPEDA-REG-9921'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          reason: 'WRONG_PASSCODE',
+          message: 'Incorrect passcode. Please enter the password you created during signup.'
+        };
+      }
+    }
+  } catch (lsErr) {
+    console.warn('LocalStorage auth lookup note:', lsErr);
+  }
+
+  // 3. Fallback check for demo account if user typed 9848012345 or AQ-AP-1234-9921
+  if (cleanPhone === '9848012345' || rawInput.toUpperCase() === 'AQ-AP-1234-9921') {
+    if (enteredPasscode === '1234' || enteredPasscode === '9900') {
+      return {
+        success: true,
+        user: {
+          id: 'farmer_01',
+          userId: 'AQ-AP-1234-9921',
+          farmerId: 'AQ-AP-1234-9921',
+          name: 'Mohith Kumar Baggu',
+          farmName: 'Srimannarayana Coastal Aqua Farm',
+          phone: '+91 98480 12345',
+          email: 'mohith.baggu@wellaqua.farm',
+          location: 'Bhimavaram, West Godavari District, Andhra Pradesh',
+          caaRegNo: 'CAA/2024/AP/WG/48291',
+          mpedaId: 'MPEDA-IND-AP-9921',
+          totalAreaAcres: 6.5,
+          totalPondsCount: 3,
+          primarySpecies: 'Vannamei Shrimp'
+        }
+      };
+    } else {
+      return {
+        success: false,
+        reason: 'WRONG_PASSCODE',
+        message: 'Incorrect passcode. (Passcode created for this account is 1234).'
+      };
+    }
+  }
+
+  // 4. User not found
+  return {
+    success: false,
+    reason: 'NOT_FOUND',
+    message: 'No registered account found with this Mobile Number or User ID. Please tap Create Account to register.'
+  };
 }
 
 /**

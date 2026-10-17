@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   LayoutDashboard, 
   FlaskConical, 
@@ -8,8 +8,10 @@ import {
   User, 
   Waves,
   LogIn,
-  ShieldCheck
+  ShieldCheck,
+  Download
 } from 'lucide-react';
+import InstallAppModal from './InstallAppModal';
 
 export default function Navbar({ 
   currentTab, 
@@ -22,6 +24,8 @@ export default function Navbar({
   onOpenAuthModal,
   t
 }) {
+  const [showInstallModal, setShowInstallModal] = useState(false);
+
   return (
     <header className="navbar">
       <div className="nav-container">
@@ -65,7 +69,7 @@ export default function Navbar({
                 SUPER-ADMIN COMMAND CENTER
               </span>
               <span style={{ background: 'rgba(251, 191, 36, 0.2)', color: '#fef08a', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                Passcode: 9900
+                AUTHORIZED
               </span>
             </div>
             <span className="hide-mobile" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -118,6 +122,30 @@ export default function Navbar({
 
         {/* Quick Right Action (Farmer Profile Avatar or Login Button) */}
         <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+
+          {/* Quick Install App on Chrome / Phone */}
+          <button
+            type="button"
+            onClick={() => setShowInstallModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '5px 10px',
+              borderRadius: '20px',
+              border: '1px solid #38bdf8',
+              background: 'rgba(2, 132, 199, 0.08)',
+              color: '#0284c7',
+              fontWeight: 700,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              marginRight: '8px'
+            }}
+            title="Install Well Aqua App directly from Chrome (APK)"
+          >
+            <Download size={13} color="#0284c7" />
+            <span className="hide-xs">Install App</span>
+          </button>
 
           {/* Show Admin Portal button ONLY if verified logged-in user is an ADMIN and not currently on admin tab */}
           {(user?.role === 'ADMIN' || user?.isAdmin) && currentTab !== 'admin' && (
@@ -240,6 +268,12 @@ export default function Navbar({
         </div>
 
       </div>
+
+      {/* PWA Install Guide Modal */}
+      <InstallAppModal 
+        isOpen={showInstallModal} 
+        onClose={() => setShowInstallModal(false)} 
+      />
     </header>
   );
 }
