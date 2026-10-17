@@ -21,6 +21,7 @@ import {
   X
 } from 'lucide-react';
 import { INITIAL_ADMIN_BROADCASTS } from '../data/mockAdminData';
+import LiveMarketPrices from './LiveMarketPrices';
 
 export default function DashboardOverview({ 
   activePond, 
@@ -353,6 +354,9 @@ export default function DashboardOverview({
           </div>
         )}
       </div>
+
+      {/* 🦐 Live Prawn & Fish Market Prices Card */}
+      <LiveMarketPrices userLocation={user?.location} />
 
       {/* Pond Header Card */}
       <div className="glass-panel" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
