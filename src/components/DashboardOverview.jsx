@@ -18,10 +18,11 @@ import {
   Compass,
   ChevronDown,
   Radio,
+  TrendingUp,
+  ArrowRight,
   X
 } from 'lucide-react';
 import { INITIAL_ADMIN_BROADCASTS } from '../data/mockAdminData';
-import LiveMarketPrices from './LiveMarketPrices';
 
 export default function DashboardOverview({ 
   activePond, 
@@ -301,7 +302,7 @@ export default function DashboardOverview({
             </button>
 
             <button
-              onClick={() => setCurrentTab('pharmacy')}
+              onClick={() => onOpenGuide ? onOpenGuide() : setCurrentTab('lab')}
               className="btn-primary"
               style={{
                 padding: '7px 14px',
@@ -315,8 +316,8 @@ export default function DashboardOverview({
                 boxShadow: '0 2px 8px rgba(217, 119, 6, 0.2)'
               }}
             >
-              <Pill size={14} />
-              <span>Order Minerals (మందులు)</span>
+              <Sparkles size={14} />
+              <span>Mineral Guide (ఖనిజాలు)</span>
             </button>
           </div>
         </div>
@@ -355,8 +356,69 @@ export default function DashboardOverview({
         )}
       </div>
 
-      {/* 🦐 Live Prawn & Fish Market Prices Card */}
-      <LiveMarketPrices userLocation={user?.location} />
+      {/* 🦐 Live Prawn & Fish Market Prices Quick Ticker */}
+      <div 
+        onClick={() => setCurrentTab('market')}
+        className="glass-panel hover-card" 
+        style={{ 
+          padding: '16px 20px', 
+          background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(16, 185, 129, 0.08))', 
+          border: '1.5px solid rgba(2, 132, 199, 0.25)',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+          }}>
+            <TrendingUp size={22} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-main)' }}>
+                Live Coastal Mandi Prices (మార్కెట్ లైవ్ ధరలు)
+              </span>
+              <span className="badge badge-emerald" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
+                <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', marginRight: '4px' }}></span>
+                TODAY LIVE
+              </span>
+            </div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Vannamei Shrimp (30C: ₹485/kg • 40C: ₹395/kg • 100C: ₹220/kg) • Fish Mandi Rates • Harvest Payout Calculator
+            </div>
+          </div>
+        </div>
+
+        <button 
+          className="btn-primary" 
+          style={{ 
+            fontSize: '0.84rem', 
+            padding: '8px 16px', 
+            borderRadius: '20px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px',
+            background: 'linear-gradient(135deg, #0284c7, #0ea5e9)'
+          }}
+        >
+          <span>View All Market Rates</span>
+          <ArrowRight size={15} />
+        </button>
+      </div>
 
       {/* Pond Header Card */}
       <div className="glass-panel" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
@@ -411,11 +473,11 @@ export default function DashboardOverview({
               <span>{t.bookSlotBtn}</span>
             </button>
             <button 
-              onClick={() => setCurrentTab('pharmacy')} 
+              onClick={() => setCurrentTab('market')} 
               className="btn-secondary"
             >
-              <Pill size={16} />
-              <span>{t.orderMedsBtn}</span>
+              <TrendingUp size={16} />
+              <span>{t.marketPrices || 'Market Price'}</span>
             </button>
           </div>
         </div>
@@ -699,7 +761,7 @@ export default function DashboardOverview({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               
               <div 
-                onClick={() => setCurrentTab('pharmacy')}
+                onClick={() => setCurrentTab('market')}
                 style={{
                   padding: '14px',
                   background: 'var(--bg-surface)',
@@ -710,13 +772,13 @@ export default function DashboardOverview({
                 }}
                 className="hover-card"
               >
-                <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>💊</div>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>Aqua Pharmacy Store</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>Order probiotics, minerals & feed</div>
+                <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>📈</div>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>Live Mandi Rates</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>Prawn & fish spot rates across 11 mandis</div>
               </div>
 
               <div 
-                onClick={() => setCurrentTab('pharmacy')}
+                onClick={() => setCurrentTab('market')}
                 style={{
                   padding: '14px',
                   background: 'var(--bg-surface)',
@@ -728,8 +790,8 @@ export default function DashboardOverview({
                 className="hover-card"
               >
                 <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>🧮</div>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>Dosage Calculator</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>Auto-calculate probiotic by acre</div>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>Harvest Calculator</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>Estimate total pond harvest revenue</div>
               </div>
 
               <div 

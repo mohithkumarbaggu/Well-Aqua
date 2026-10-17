@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import DashboardOverview from './components/DashboardOverview';
 import LabBookingSection from './components/LabBookingSection';
 import MedicineStoreSection from './components/MedicineStoreSection';
+import MarketPriceSection from './components/MarketPriceSection';
 import PondPerformanceSection from './components/PondPerformanceSection';
 import CartDrawer from './components/CartDrawer';
 import LabReportModal from './components/LabReportModal';
@@ -28,6 +29,7 @@ import {
   FlaskConical, 
   Pill, 
   TrendingUp, 
+  FileText,
   PhoneCall, 
   MessageSquare, 
   ShieldCheck, 
@@ -437,12 +439,10 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'pharmacy' && (
-          <MedicineStoreSection
-            cart={cart}
-            setCart={setCart}
-            setIsCartOpen={setIsCartOpen}
-            showToast={showToast}
+        {currentTab === 'market' && (
+          <MarketPriceSection
+            user={user}
+            setCurrentTab={setCurrentTab}
           />
         )}
 
@@ -543,18 +543,18 @@ export default function App() {
         </button>
 
         <button 
-          onClick={() => setCurrentTab('pharmacy')} 
-          className={`mobile-tab-btn ${currentTab === 'pharmacy' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('market')} 
+          className={`mobile-tab-btn ${currentTab === 'market' ? 'active' : ''}`}
         >
-          <Pill size={20} />
-          <span>Store</span>
+          <TrendingUp size={20} />
+          <span>Market Price</span>
         </button>
 
         <button 
           onClick={() => setCurrentTab('performance')} 
           className={`mobile-tab-btn ${currentTab === 'performance' ? 'active' : ''}`}
         >
-          <TrendingUp size={20} />
+          <FileText size={20} />
           <span>Report</span>
         </button>
 

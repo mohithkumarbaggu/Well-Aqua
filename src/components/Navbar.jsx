@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   LayoutDashboard, 
   FlaskConical, 
-  Pill, 
+  FileText, 
   TrendingUp, 
   ShoppingCart, 
   User, 
@@ -95,19 +95,19 @@ export default function Navbar({
             </button>
 
             <button 
-              className={`nav-tab-btn ${currentTab === 'pharmacy' ? 'active' : ''}`}
-              onClick={() => setCurrentTab('pharmacy')}
+              className={`nav-tab-btn ${currentTab === 'market' ? 'active' : ''}`}
+              onClick={() => setCurrentTab('market')}
             >
-              <Pill size={16} />
-              <span>{t.pharmacy}</span>
+              <TrendingUp size={16} />
+              <span>{t.marketPrices || 'Market Price'}</span>
             </button>
 
             <button 
               className={`nav-tab-btn ${currentTab === 'performance' ? 'active' : ''}`}
               onClick={() => setCurrentTab('performance')}
             >
-              <TrendingUp size={16} />
-              <span>{t.reports}</span>
+              <FileText size={16} />
+              <span>{t.reports || 'Report'}</span>
             </button>
 
             <button 
