@@ -121,7 +121,8 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
     setIsLoading(true);
     setErrorMessage('');
 
-    const cleanPhone = signupForm.phone.replace(/\D/g, '');
+    const rawDigits = signupForm.phone.replace(/\D/g, '');
+    const cleanPhone = rawDigits.slice(-10);
     const cleanName = signupForm.name.toLowerCase().replace(/[^a-z0-9]/g, '');
     const userEmail = signupForm.email?.trim() || `${cleanName || 'farmer'}.${cleanPhone}@gmail.com`;
     const pwd = signupForm.pin.length >= 6 ? signupForm.pin : `${signupForm.pin}123456`;
@@ -151,15 +152,12 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
 
         if (authErr) {
           console.warn('Supabase Auth Notice:', authErr.message);
-          let friendlyMsg = authErr.message;
-          if (authErr.message.toLowerCase().includes('rate limit')) {
-            friendlyMsg = 'Supabase Email Rate Limit Exceeded! Please disable "Confirm email" in Supabase Dashboard (Authentication -> Providers -> Email -> Confirm email: OFF) to allow instant registration.';
-          } else if (authErr.message.toLowerCase().includes('already registered')) {
-            friendlyMsg = 'This account is already registered! Please switch to Login tab or use another phone/email.';
+          if (authErr.message.toLowerCase().includes('already registered')) {
+            setErrorMessage('This account is already registered! Please switch to Login tab or use another phone/email.');
+            setIsLoading(false);
+            return;
           }
-          setErrorMessage(friendlyMsg);
-          setIsLoading(false);
-          return;
+          // Other notices (such as email rate limit) allow proceeding with direct user_logins persistence
         } else if (authData?.user) {
           createdUser = authData.user;
           console.log('✅ Registered in Supabase auth.users:', createdUser.id);
@@ -225,40 +223,42 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
       }
     }
 
-    // Automatically sync login credentials & user ID to Supabase user_logins table
-    syncUserToSupabase({
-      userId: generatedUserId,
-      name: signupForm.name,
-      farmName: signupForm.farmName,
-      phone: cleanPhone,
-      email: userEmail,
-      pin: signupForm.pin,
-      location: signupForm.location,
-      totalAreaAcres: signupForm.acres,
-      totalPondsCount: signupForm.pondCount,
-      primarySpecies: signupForm.species,
-      authUserId: createdUser?.id
-    });
-
-    setTimeout(() => {
-      setIsLoading(false);
-      onLoginSuccess({
-        id: createdUser?.id || generatedUserId,
+    // Automatically sync login credentials & user ID to Supabase user_logins table and local registry
+    try {
+      await syncUserToSupabase({
         userId: generatedUserId,
-        farmerId: generatedUserId,
-        name: signupForm.name,
-        farmName: signupForm.farmName,
-        phone: '+91 ' + cleanPhone,
+        name: signupForm.name.trim(),
+        farmName: signupForm.farmName.trim(),
+        phone: cleanPhone,
         email: userEmail,
         pin: signupForm.pin,
         location: signupForm.location,
-        caaRegNo: 'CAA/2025/REG/' + Math.floor(10000 + Math.random() * 90000),
-        mpedaId: 'MPEDA-REG-' + Math.floor(1000 + Math.random() * 9000),
-        totalAreaAcres: Number(signupForm.acres) || 4.0,
-        totalPondsCount: Number(signupForm.pondCount) || 3,
-        primarySpecies: signupForm.species
+        totalAreaAcres: signupForm.acres,
+        totalPondsCount: signupForm.pondCount,
+        primarySpecies: signupForm.species,
+        authUserId: createdUser?.id
       });
-    }, 450);
+    } catch (syncErr) {
+      console.warn('Sync error on signup:', syncErr);
+    }
+
+    setIsLoading(false);
+    onLoginSuccess({
+      id: createdUser?.id || generatedUserId,
+      userId: generatedUserId,
+      farmerId: generatedUserId,
+      name: signupForm.name.trim(),
+      farmName: signupForm.farmName.trim(),
+      phone: '+91 ' + cleanPhone,
+      email: userEmail,
+      pin: signupForm.pin,
+      location: signupForm.location,
+      caaRegNo: 'CAA/2025/REG/' + Math.floor(10000 + Math.random() * 90000),
+      mpedaId: 'MPEDA-REG-' + Math.floor(1000 + Math.random() * 9000),
+      totalAreaAcres: Number(signupForm.acres) || 4.0,
+      totalPondsCount: Number(signupForm.pondCount) || 3,
+      primarySpecies: signupForm.species
+    });
   };
 
   return (

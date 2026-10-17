@@ -50,18 +50,20 @@ export async function syncUserToSupabase(userData) {
 
   const userId = getOrGenerateUserId(userData);
   const cleanPhone = (userData.phone || '').replace(/\D/g, '');
-  const pin = userData.pin || userData.pinCode || '1234';
-  const email = userData.email || `farmer.${cleanPhone.slice(-4) || 'user'}@gmail.com`;
+  const last10 = cleanPhone.slice(-10);
+  const formattedPhone = last10 ? `+91 ${last10}` : '+91 9999999999';
+  const pin = userData.pin || userData.pinCode || userData.pin_code || '1234';
+  const email = userData.email || `farmer.${last10 || 'user'}@gmail.com`;
 
   const loginPayload = {
     id: userId,
     user_id: userId,
     full_name: userData.name || userData.full_name || 'Aqua Farmer',
-    phone: cleanPhone ? `+91 ${cleanPhone}` : '+91 9848012345',
+    phone: formattedPhone,
     email: email,
     pin_code: String(pin),
     farm_name: userData.farmName || userData.farm_name || 'Coastal Aqua Farm',
-    location: userData.location || 'Bhimavaram, Andhra Pradesh',
+    location: userData.location || 'Andhra Pradesh',
     total_acres: parseFloat(userData.totalAreaAcres || userData.total_acres || 5.0),
     total_ponds: parseInt(userData.totalPondsCount || userData.total_ponds || 3, 10),
     primary_species: userData.primarySpecies || userData.primary_species || 'Vannamei Shrimp',
@@ -74,7 +76,10 @@ export async function syncUserToSupabase(userData) {
     try {
       const storedRaw = localStorage.getItem('wellaqua_registered_users');
       const storedUsers = storedRaw ? JSON.parse(storedRaw) : [];
-      const existingIdx = storedUsers.findIndex(u => u.user_id === userId || u.phone === loginPayload.phone || u.phone === cleanPhone);
+      const existingIdx = storedUsers.findIndex(u => {
+        const uPhone = (u.phone || '').replace(/\D/g, '').slice(-10);
+        return (u.user_id && u.user_id === userId) || (last10 && uPhone === last10);
+      });
       if (existingIdx >= 0) {
         storedUsers[existingIdx] = { ...storedUsers[existingIdx], ...loginPayload };
       } else {
@@ -135,6 +140,7 @@ export async function syncUserToSupabase(userData) {
 /**
  * Validates farmer credentials against Supabase user_logins table
  * and local registry using the password/passcode created during signup.
+ * Strictly verifies registered accounts so only created accounts can log in.
  */
 export async function authenticateFarmer(phoneOrUserId, passcode) {
   if (!phoneOrUserId || !phoneOrUserId.trim()) {
@@ -146,14 +152,15 @@ export async function authenticateFarmer(phoneOrUserId, passcode) {
 
   const rawInput = phoneOrUserId.trim();
   const cleanPhone = rawInput.replace(/\D/g, '');
+  const last10 = cleanPhone.slice(-10);
   const enteredPasscode = passcode.trim();
 
   // 1. Try querying Supabase user_logins table
   if (isSupabaseConfigured) {
     try {
       const filterConditions = [];
-      if (cleanPhone && cleanPhone.length >= 7) {
-        filterConditions.push(`phone.ilike.%${cleanPhone.slice(-10)}%`);
+      if (last10 && last10.length >= 7) {
+        filterConditions.push(`phone.ilike.%${last10}%`);
       }
       filterConditions.push(`user_id.ilike.${rawInput}`);
       filterConditions.push(`email.ilike.${rawInput}`);
@@ -165,7 +172,7 @@ export async function authenticateFarmer(phoneOrUserId, passcode) {
 
       if (!error && data && data.length > 0) {
         const matched = data.find(
-          row => String(row.pin_code || '').trim() === enteredPasscode
+          row => String(row.pin_code || row.login_pin || '').trim() === enteredPasscode
         );
 
         if (matched) {
@@ -199,35 +206,84 @@ export async function authenticateFarmer(phoneOrUserId, passcode) {
     } catch (err) {
       console.warn('Supabase authentication check note:', err);
     }
+
+    // Also check profiles table in Supabase
+    try {
+      const profFilters = [];
+      if (last10 && last10.length >= 7) {
+        profFilters.push(`phone.ilike.%${last10}%`);
+      }
+      profFilters.push(`farmer_id.ilike.${rawInput}`);
+      profFilters.push(`email.ilike.${rawInput}`);
+
+      const { data: profData, error: profErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(profFilters.join(','));
+
+      if (!profErr && profData && profData.length > 0) {
+        const matchedProf = profData.find(
+          row => String(row.login_pin || '').trim() === enteredPasscode
+        );
+        if (matchedProf) {
+          return {
+            success: true,
+            user: {
+              id: matchedProf.id || matchedProf.farmer_id,
+              userId: matchedProf.farmer_id || matchedProf.id,
+              farmerId: matchedProf.farmer_id || matchedProf.id,
+              name: matchedProf.full_name,
+              farmName: matchedProf.farm_name,
+              phone: matchedProf.phone,
+              email: matchedProf.email,
+              location: matchedProf.location,
+              totalAreaAcres: parseFloat(matchedProf.total_acres) || 5.0,
+              totalPondsCount: parseInt(matchedProf.total_ponds, 10) || 3,
+              primarySpecies: matchedProf.primary_species || 'Vannamei Shrimp',
+              caaRegNo: matchedProf.caa_reg_no || 'CAA/2025/REG/' + Math.floor(10000 + Math.random() * 90000),
+              mpedaId: matchedProf.mpeda_id || 'MPEDA-REG-' + Math.floor(1000 + Math.random() * 9000)
+            }
+          };
+        } else {
+          return {
+            success: false,
+            reason: 'WRONG_PASSCODE',
+            message: 'Incorrect passcode. Please enter the password you created during signup.'
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase profiles fallback lookup note:', err);
+    }
   }
 
-  // 2. Check localStorage fallback
+  // 2. Check localStorage registry (wellaqua_registered_users)
   try {
     const storedRaw = localStorage.getItem('wellaqua_registered_users');
     const storedUsers = storedRaw ? JSON.parse(storedRaw) : [];
 
     const foundInLocal = storedUsers.find(u => {
-      const uPhone = (u.phone || '').replace(/\D/g, '');
-      const uUserId = (u.user_id || u.userId || '').toLowerCase();
+      const uPhone = (u.phone || '').replace(/\D/g, '').slice(-10);
+      const uUserId = (u.user_id || u.userId || u.farmerId || '').toLowerCase();
       const uEmail = (u.email || '').toLowerCase();
       const inputLower = rawInput.toLowerCase();
 
       return (
-        (cleanPhone && cleanPhone.length >= 7 && uPhone.includes(cleanPhone.slice(-10))) ||
+        (last10 && last10.length >= 7 && uPhone === last10) ||
         uUserId === inputLower ||
         uEmail === inputLower
       );
     });
 
     if (foundInLocal) {
-      const userPin = String(foundInLocal.pin_code || foundInLocal.pin || '').trim();
+      const userPin = String(foundInLocal.pin_code || foundInLocal.pin || foundInLocal.login_pin || '').trim();
       if (userPin === enteredPasscode) {
         return {
           success: true,
           user: {
             id: foundInLocal.user_id || foundInLocal.id || 'farmer_user',
-            userId: foundInLocal.user_id || foundInLocal.id,
-            farmerId: foundInLocal.user_id || foundInLocal.id,
+            userId: foundInLocal.user_id || foundInLocal.id || foundInLocal.farmerId,
+            farmerId: foundInLocal.user_id || foundInLocal.id || foundInLocal.farmerId,
             name: foundInLocal.full_name || foundInLocal.name,
             farmName: foundInLocal.farm_name || foundInLocal.farmName,
             phone: foundInLocal.phone,
@@ -252,41 +308,11 @@ export async function authenticateFarmer(phoneOrUserId, passcode) {
     console.warn('LocalStorage auth lookup note:', lsErr);
   }
 
-  // 3. Fallback check for demo account if user typed 9848012345 or AQ-AP-1234-9921
-  if (cleanPhone === '9848012345' || rawInput.toUpperCase() === 'AQ-AP-1234-9921') {
-    if (enteredPasscode === '1234' || enteredPasscode === '9900') {
-      return {
-        success: true,
-        user: {
-          id: 'farmer_01',
-          userId: 'AQ-AP-1234-9921',
-          farmerId: 'AQ-AP-1234-9921',
-          name: 'Mohith Kumar Baggu',
-          farmName: 'Srimannarayana Coastal Aqua Farm',
-          phone: '+91 98480 12345',
-          email: 'mohith.baggu@wellaqua.farm',
-          location: 'Bhimavaram, West Godavari District, Andhra Pradesh',
-          caaRegNo: 'CAA/2024/AP/WG/48291',
-          mpedaId: 'MPEDA-IND-AP-9921',
-          totalAreaAcres: 6.5,
-          totalPondsCount: 3,
-          primarySpecies: 'Vannamei Shrimp'
-        }
-      };
-    } else {
-      return {
-        success: false,
-        reason: 'WRONG_PASSCODE',
-        message: 'Incorrect passcode. (Passcode created for this account is 1234).'
-      };
-    }
-  }
-
-  // 4. User not found
+  // 3. User not registered: ONLY accounts created by user can log in!
   return {
     success: false,
     reason: 'NOT_FOUND',
-    message: 'No registered account found with this Mobile Number or User ID. Please tap Create Account to register.'
+    message: 'No registered account found with this Mobile Number or User ID. Only accounts created in Sign Up can log in.'
   };
 }
 

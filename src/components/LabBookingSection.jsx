@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 
 export default function LabBookingSection({ 
+  user,
   activePond, 
   ponds, 
   bookings, 
@@ -43,9 +44,16 @@ export default function LabBookingSection({
   const [collectionMode, setCollectionMode] = useState('Doorstep Farm Collection');
   const [bookingDate, setBookingDate] = useState('2026-10-18');
   const [bookingTime, setBookingTime] = useState('06:30 AM - 08:00 AM');
-  const [farmerPhone, setFarmerPhone] = useState('+91 98480 12345');
+  const [farmerPhone, setFarmerPhone] = useState(user?.phone || '');
   const [farmerNotes, setFarmerNotes] = useState('');
   const [bookingSuccessAlert, setBookingSuccessAlert] = useState(null);
+
+  // Sync phone when logged in user changes
+  React.useEffect(() => {
+    if (user?.phone) {
+      setFarmerPhone(user.phone);
+    }
+  }, [user]);
 
   // Filter service categories
   const [serviceCategory, setServiceCategory] = useState('ALL');
@@ -855,7 +863,7 @@ export default function LabBookingSection({
                   onChange={(e) => setFarmerPhone(e.target.value)}
                   className="input-field"
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', fontSize: '0.88rem' }}
-                  placeholder="+91 98480 12345"
+                  placeholder="+91 98765 43210"
                   required
                 />
               </div>

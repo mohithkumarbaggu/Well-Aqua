@@ -125,7 +125,8 @@ export default function AuthModal({
     setErrorMessage('');
 
     // Formulate a valid domain email for Supabase Auth (Supabase rejects fake domains like @wellaqua.farm)
-    const cleanPhone = signupForm.phone.replace(/\D/g, '');
+    const rawDigits = signupForm.phone.replace(/\D/g, '');
+    const cleanPhone = rawDigits.slice(-10);
     const cleanName = signupForm.name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'farmer';
     const emailToUse = signupForm.email && signupForm.email.includes('@')
       ? signupForm.email.trim().toLowerCase()
@@ -161,15 +162,11 @@ export default function AuthModal({
 
         if (signUpError) {
           console.warn('Supabase auth signup notice:', signUpError.message);
-          let friendlyMsg = signUpError.message;
-          if (signUpError.message.toLowerCase().includes('rate limit')) {
-            friendlyMsg = 'Supabase Email Rate Limit Exceeded! Please disable "Confirm email" in Supabase Dashboard (Authentication -> Providers -> Email -> Confirm email: OFF) to allow instant registration.';
-          } else if (signUpError.message.toLowerCase().includes('already registered')) {
-            friendlyMsg = 'This account is already registered! Please switch to Login tab or use another phone/email.';
+          if (signUpError.message.toLowerCase().includes('already registered')) {
+            setErrorMessage('This account is already registered! Please switch to Login tab or use another phone/email.');
+            setIsLoading(false);
+            return;
           }
-          setErrorMessage(friendlyMsg);
-          setIsLoading(false);
-          return;
         }
 
         createdUser = authData?.user;
@@ -226,20 +223,24 @@ export default function AuthModal({
       console.warn('Supabase registration sync exception:', err);
     }
 
-    // Automatically sync login credentials & user ID to Supabase user_logins table
-    syncUserToSupabase({
-      userId: generatedUserId,
-      name: signupForm.name,
-      farmName: signupForm.farmName,
-      phone: cleanPhone,
-      email: emailToUse,
-      pin: rawPin,
-      location: signupForm.location,
-      totalAreaAcres: signupForm.acres,
-      totalPondsCount: signupForm.pondCount,
-      primarySpecies: signupForm.species,
-      authUserId: createdUser?.id
-    });
+    // Automatically sync login credentials & user ID to Supabase user_logins table and local registry
+    try {
+      await syncUserToSupabase({
+        userId: generatedUserId,
+        name: signupForm.name.trim(),
+        farmName: signupForm.farmName.trim(),
+        phone: cleanPhone,
+        email: emailToUse,
+        pin: rawPin,
+        location: signupForm.location,
+        totalAreaAcres: signupForm.acres,
+        totalPondsCount: signupForm.pondCount,
+        primarySpecies: signupForm.species,
+        authUserId: createdUser?.id
+      });
+    } catch (syncErr) {
+      console.warn('Sync error on signup in modal:', syncErr);
+    }
 
     setIsLoading(false);
 

@@ -188,27 +188,47 @@ export default function App() {
   // Language state
   const [language, setLanguage] = useState('en');
 
-  // Sync Supabase Auth session on startup
+  // Sync Supabase Auth session on startup only if a registered user session exists
   useEffect(() => {
     if (!isSupabaseConfigured) return;
+
+    // Check if there is already an active user saved in localStorage
+    const savedRaw = localStorage.getItem('well_aqua_user');
+    if (savedRaw) {
+      try {
+        const savedUser = JSON.parse(savedRaw);
+        if (savedUser && (savedUser.userId || savedUser.name)) {
+          // Keep the registered user active
+          return;
+        }
+      } catch (e) {}
+    }
 
     supabase.auth.getSession().then(({ data }) => {
       if (data?.session?.user) {
         const u = data.session.user;
         const meta = u.user_metadata || {};
-        setUser({
-          id: u.id,
-          name: meta.name || 'Mohith Kumar Baggu',
-          farmName: meta.farmName || 'Srimannarayana Coastal Aqua Farm',
-          phone: meta.phone || '+91 98480 12345',
-          email: u.email || 'mohith.baggu@wellaqua.farm',
-          location: meta.location || 'Bhimavaram, West Godavari District, Andhra Pradesh',
-          caaRegNo: meta.caaRegNo || 'CAA/2024/AP/WG/48291',
-          mpedaId: meta.mpedaId || 'MPEDA-IND-AP-9921',
-          totalAreaAcres: meta.acres || 6.5,
-          totalPondsCount: meta.pondCount || 3,
-          primarySpecies: meta.species || 'Vannamei Shrimp'
-        });
+        if (meta.name) {
+          const sessionUser = {
+            id: u.id,
+            userId: meta.farmerId || u.id,
+            farmerId: meta.farmerId || u.id,
+            name: meta.name,
+            farmName: meta.farmName || 'My Aqua Farm',
+            phone: meta.phone || '',
+            email: u.email || '',
+            location: meta.location || 'Andhra Pradesh',
+            caaRegNo: meta.caaRegNo || '',
+            mpedaId: meta.mpedaId || '',
+            totalAreaAcres: meta.acres || 5.0,
+            totalPondsCount: meta.pondCount || 3,
+            primarySpecies: meta.species || 'Vannamei Shrimp'
+          };
+          setUser(sessionUser);
+          try {
+            localStorage.setItem('well_aqua_user', JSON.stringify(sessionUser));
+          } catch (e) {}
+        }
       }
     }).catch(err => console.warn('Supabase session load:', err));
 
@@ -216,19 +236,27 @@ export default function App() {
       if (session?.user) {
         const u = session.user;
         const meta = u.user_metadata || {};
-        setUser({
-          id: u.id,
-          name: meta.name || 'Mohith Kumar Baggu',
-          farmName: meta.farmName || 'Srimannarayana Coastal Aqua Farm',
-          phone: meta.phone || '+91 98480 12345',
-          email: u.email || 'mohith.baggu@wellaqua.farm',
-          location: meta.location || 'Bhimavaram, West Godavari District, Andhra Pradesh',
-          caaRegNo: meta.caaRegNo || 'CAA/2024/AP/WG/48291',
-          mpedaId: meta.mpedaId || 'MPEDA-IND-AP-9921',
-          totalAreaAcres: meta.acres || 6.5,
-          totalPondsCount: meta.pondCount || 3,
-          primarySpecies: meta.species || 'Vannamei Shrimp'
-        });
+        if (meta.name) {
+          const sessionUser = {
+            id: u.id,
+            userId: meta.farmerId || u.id,
+            farmerId: meta.farmerId || u.id,
+            name: meta.name,
+            farmName: meta.farmName || 'My Aqua Farm',
+            phone: meta.phone || '',
+            email: u.email || '',
+            location: meta.location || 'Andhra Pradesh',
+            caaRegNo: meta.caaRegNo || '',
+            mpedaId: meta.mpedaId || '',
+            totalAreaAcres: meta.acres || 5.0,
+            totalPondsCount: meta.pondCount || 3,
+            primarySpecies: meta.species || 'Vannamei Shrimp'
+          };
+          setUser(sessionUser);
+          try {
+            localStorage.setItem('well_aqua_user', JSON.stringify(sessionUser));
+          } catch (e) {}
+        }
       }
     });
 
@@ -376,6 +404,7 @@ export default function App() {
 
         {currentTab === 'lab' && (
           <LabBookingSection
+            user={user}
             activePond={activePond}
             ponds={ponds}
             bookings={bookings}

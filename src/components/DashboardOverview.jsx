@@ -80,7 +80,7 @@ export default function DashboardOverview({
     } catch (e) {}
   };
 
-  const farmerName = user?.name || 'Mohith Kumar Baggu';
+  const farmerName = user?.name || user?.fullName || 'Farmer';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

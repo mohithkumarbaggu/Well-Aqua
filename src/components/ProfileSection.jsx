@@ -52,12 +52,25 @@ export default function ProfileSection({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-    name: user?.name || 'Mohith Kumar Baggu',
-    farmName: user?.farmName || 'Srimannarayana Coastal Aqua Farm',
-    phone: user?.phone || '+91 98480 12345',
-    email: user?.email || 'mohith.baggu@wellaqua.farm',
-    location: user?.location || 'Bhimavaram, West Godavari District, Andhra Pradesh - 534202'
+    name: user?.name || user?.fullName || 'Aqua Farmer',
+    farmName: user?.farmName || 'My Aqua Farm',
+    phone: user?.phone || '',
+    email: user?.email || '',
+    location: user?.location || 'Andhra Pradesh'
   });
+
+  // Keep editData updated when user account changes
+  React.useEffect(() => {
+    if (user) {
+      setEditData({
+        name: user.name || user.fullName || 'Aqua Farmer',
+        farmName: user.farmName || 'My Aqua Farm',
+        phone: user.phone || '',
+        email: user.email || '',
+        location: user.location || 'Andhra Pradesh'
+      });
+    }
+  }, [user]);
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showPin, setShowPin] = useState(false);
@@ -141,8 +154,8 @@ export default function ProfileSection({
   };
 
   const farmerInitials = user?.name
-    ? (user.name.trim().split(/\s+/).map(n => n[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || 'MB')
-    : 'MB';
+    ? (user.name.trim().split(/\s+/).map(n => n[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || 'AF')
+    : 'AF';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -183,21 +196,21 @@ export default function ProfileSection({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <h2 style={{ fontSize: '1.4rem', color: 'var(--text-main)', margin: 0 }}>
-                  {isEditing ? editData.name : (user?.name || 'Mohith Kumar Baggu')}
+                  {isEditing ? editData.name : (user?.name || user?.fullName || 'Aqua Farmer')}
                 </h2>
                 <span className="badge badge-cyan" style={{ fontSize: '0.7rem' }}>
                   ✓ Verified Aqua Farmer
                 </span>
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 600 }}>
-                {isEditing ? editData.farmName : (user?.farmName || 'Srimannarayana Coastal Aqua Farm')}
+                {isEditing ? editData.farmName : (user?.farmName || 'My Aqua Farm')}
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                 <MapPin size={13} color="var(--cyan)" />
-                <span>{isEditing ? editData.location : (user?.location || 'Bhimavaram, Andhra Pradesh')}</span>
+                <span>{isEditing ? editData.location : (user?.location || 'Andhra Pradesh')}</span>
                 <span style={{ margin: '0 4px' }}>•</span>
                 <Phone size={13} color="#10b981" />
-                <span>{isEditing ? editData.phone : (user?.phone || '+91 98480 12345')}</span>
+                <span>{isEditing ? editData.phone : (user?.phone || 'Mobile Not Linked')}</span>
               </div>
             </div>
           </div>
@@ -330,10 +343,10 @@ export default function ProfileSection({
                 Login Mobile Number
               </div>
               <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#f1f5f9' }}>
-                {user?.phone || '+91 98480 12345'}
+                {user?.phone || 'Not provided'}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-                Used for instant OTP verification
+                Registered farmer mobile number
               </div>
             </div>
 
@@ -343,7 +356,7 @@ export default function ProfileSection({
                 Supabase Auth Email
               </div>
               <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={user?.email}>
-                {user?.email || 'mohith.baggu@wellaqua.farm'}
+                {user?.email || 'Registered via Mobile Number'}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
                 Linked Auth User Account
