@@ -314,3 +314,49 @@ export function getMarketPricesForLocation(locationId = 'bhimavaram') {
     };
   });
 }
+
+// Exact Prawn Count-wise rates matching farmer mandi standard (as shown in reference)
+export const PRAWN_COUNT_WISE_RATES = [
+  { count: '100', countNum: 100, baseRate: 285, isAvailable: true, description: '100 count (10g) Early Thinning' },
+  { count: '90', countNum: 90, baseRate: 295, isAvailable: true, description: '90 count (11.1g)' },
+  { count: '80', countNum: 80, baseRate: 320, isAvailable: true, description: '80 count (12.5g)' },
+  { count: '70', countNum: 70, baseRate: 350, isAvailable: true, description: '70 count (14.2g)' },
+  { count: '60', countNum: 60, baseRate: 375, isAvailable: true, description: '60 count (16.6g)' },
+  { count: '50', countNum: 50, baseRate: 395, isAvailable: true, description: '50 count (20g) Standard Export' },
+  { count: '47', countNum: 47, baseRate: 400, isAvailable: true, description: '47 count (21.2g)' },
+  { count: '45', countNum: 45, baseRate: 405, isAvailable: true, description: '45 count (22.2g)' },
+  { count: '40', countNum: 40, baseRate: 455, isAvailable: true, description: '40 count (25g) Prime Export' },
+  { count: '37', countNum: 37, baseRate: 460, isAvailable: true, description: '37 count (27g)' },
+  { count: '35', countNum: 35, baseRate: 465, isAvailable: true, description: '35 count (28.5g)' },
+  { count: '30', countNum: 30, baseRate: 500, isAvailable: true, description: '30 count (33.3g) Jumbo Grade' },
+  { count: '25', countNum: 25, baseRate: null, isAvailable: false, description: '25 count (No active quote)' },
+  { count: '20', countNum: 20, baseRate: null, isAvailable: false, description: '20 count (No active quote)' },
+  { count: '200', countNum: 200, baseRate: 185, isAvailable: true, description: '200 count (5g) Juvenile / Seed' }
+];
+
+export function getCountWiseRatesForLocation(locationId = 'bhimavaram') {
+  const loc = MARKET_LOCATIONS.find(l => l.id === locationId) || MARKET_LOCATIONS[0];
+  const offset = LOCATION_PRICE_OFFSETS[loc.id] || { prawn: 0 };
+  const prawnOffset = offset.prawn || 0;
+
+  return PRAWN_COUNT_WISE_RATES.map(item => {
+    if (!item.isAvailable || item.baseRate === null) {
+      return {
+        ...item,
+        rate: 'N/A',
+        rateNum: null,
+        locationId: loc.id,
+        locationName: loc.name
+      };
+    }
+    const currentRate = Math.max(50, item.baseRate + prawnOffset);
+    return {
+      ...item,
+      rate: `₹${currentRate}`,
+      rateNum: currentRate,
+      locationId: loc.id,
+      locationName: loc.name
+    };
+  });
+}
+
