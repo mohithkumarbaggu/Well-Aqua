@@ -16,7 +16,10 @@ import {
   Globe,
   HelpCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  ChevronRight,
+  Shield,
+  X
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { generateFarmerUserId, syncUserToSupabase } from '../utils/userIdGenerator';
@@ -32,11 +35,11 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
   const [adminPasscodeError, setAdminPasscodeError] = useState('');
 
   // Login form state
-  const [phone, setPhone] = useState('9848012345');
+  const [phone, setPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
-  const [email, setEmail] = useState('mohith.baggu@wellaqua.farm');
-  const [password, setPassword] = useState('farmer@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   // Sign up form state
@@ -58,11 +61,12 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
   const handleAdminPasscodeSubmit = (e) => {
     e.preventDefault();
     if (adminPasscode.trim() === '9900') {
+      setShowAdminPasscode(false);
       if (onAdminLoginSuccess) {
         onAdminLoginSuccess();
       }
     } else {
-      setAdminPasscodeError('Incorrect passcode! Passcode is 9900.');
+      setAdminPasscodeError('Incorrect passcode. Please try again.');
     }
   };
 
@@ -108,7 +112,7 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
     setTimeout(() => {
       setIsLoading(false);
       setOtpSent(true);
-      setOtp('4829'); // Auto-fill convenience
+      setOtp('');
     }, 400);
   };
 
@@ -589,43 +593,47 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
             </div>
           </div>
 
-          {/* Right Column: Premium Glassmorphism Auth Card */}
+          {/* Right Column: Authentic iOS Cupertino Style Auth Card */}
           <div style={{
-            background: '#ffffff',
-            borderRadius: '24px',
-            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.45)',
-            border: '1px solid rgba(255, 255, 255, 0.4)',
+            background: 'rgba(255, 255, 255, 0.94)',
+            backdropFilter: 'blur(30px) saturate(190%)',
+            WebkitBackdropFilter: 'blur(30px) saturate(190%)',
+            borderRadius: '26px',
+            boxShadow: '0 24px 60px -12px rgba(0, 0, 0, 0.35), 0 0 1px rgba(0, 0, 0, 0.12)',
+            border: '1px solid rgba(255, 255, 255, 0.75)',
             overflow: 'hidden',
             width: '100%',
-            maxWidth: '460px',
-            margin: '0 auto'
+            maxWidth: '430px',
+            margin: '0 auto',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif'
           }}>
 
-            {/* Top Segmented Mode Switcher */}
+            {/* iOS Segmented Control (Sign In / Create Account) */}
             <div style={{
               display: 'flex',
-              background: '#f8fafc',
-              borderBottom: '1px solid #e2e8f0',
-              padding: '6px'
+              background: 'rgba(118, 118, 128, 0.12)',
+              borderRadius: '13px',
+              padding: '3px',
+              margin: '22px 22px 6px 22px'
             }}>
               <button
                 type="button"
                 onClick={() => { setMode('login'); setErrorMessage(''); }}
                 style={{
                   flex: 1,
-                  padding: '12px',
-                  borderRadius: '14px',
-                  fontSize: '0.92rem',
-                  fontWeight: 700,
-                  color: mode === 'login' ? '#0284c7' : '#64748b',
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  color: mode === 'login' ? '#000000' : 'rgba(60, 60, 67, 0.75)',
                   background: mode === 'login' ? '#ffffff' : 'transparent',
-                  boxShadow: mode === 'login' ? '0 2px 8px rgba(0, 0, 0, 0.08)' : 'none',
-                  transition: 'all 0.2s ease',
+                  boxShadow: mode === 'login' ? '0 3px 8px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)' : 'none',
                   border: 'none',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
               >
-                Sign In (లాగిన్)
+                Sign In
               </button>
 
               <button
@@ -633,34 +641,35 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
                 onClick={() => { setMode('signup'); setErrorMessage(''); }}
                 style={{
                   flex: 1,
-                  padding: '12px',
-                  borderRadius: '14px',
-                  fontSize: '0.92rem',
-                  fontWeight: 700,
-                  color: mode === 'signup' ? '#0284c7' : '#64748b',
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  color: mode === 'signup' ? '#000000' : 'rgba(60, 60, 67, 0.75)',
                   background: mode === 'signup' ? '#ffffff' : 'transparent',
-                  boxShadow: mode === 'signup' ? '0 2px 8px rgba(0, 0, 0, 0.08)' : 'none',
-                  transition: 'all 0.2s ease',
+                  boxShadow: mode === 'signup' ? '0 3px 8px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)' : 'none',
                   border: 'none',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
               >
-                Create Account (రిజిస్ట్రేషన్)
+                Create Account
               </button>
             </div>
 
             {/* Form Body Container */}
-            <div style={{ padding: '24px 24px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ padding: '16px 22px 22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
-              {/* Error Banner */}
+              {/* iOS Error Callout */}
               {errorMessage && (
                 <div style={{
-                  background: 'rgba(225, 29, 72, 0.08)',
-                  border: '1px solid #fecdd3',
-                  color: '#e11d48',
+                  background: 'rgba(255, 59, 48, 0.1)',
+                  border: '0.5px solid rgba(255, 59, 48, 0.3)',
+                  color: '#FF3B30',
                   padding: '10px 14px',
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   fontSize: '0.82rem',
+                  fontWeight: 500,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'
@@ -670,164 +679,188 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
                 </div>
               )}
 
-              {/* ======================= SIGN IN ======================= */}
+              {/* ======================= iOS SIGN IN ======================= */}
               {mode === 'login' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   
-                  {/* Toggle: OTP vs Password */}
+                  {/* Subtle Sub-toggle: Mobile OTP vs Phone & PIN */}
                   <div style={{
                     display: 'flex',
-                    background: '#f1f5f9',
-                    borderRadius: '10px',
-                    padding: '3px'
+                    justifyContent: 'center',
+                    gap: '18px',
+                    marginBottom: '2px'
                   }}>
                     <button
                       type="button"
                       onClick={() => { setLoginMethod('otp'); setErrorMessage(''); }}
                       style={{
-                        flex: 1,
-                        padding: '8px',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        borderRadius: '8px',
+                        background: 'none',
                         border: 'none',
-                        cursor: 'pointer',
-                        color: loginMethod === 'otp' ? '#0284c7' : '#64748b',
-                        background: loginMethod === 'otp' ? '#ffffff' : 'transparent',
-                        boxShadow: loginMethod === 'otp' ? '0 1px 4px rgba(0,0,0,0.06)' : 'none'
+                        padding: '4px 2px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        color: loginMethod === 'otp' ? '#007AFF' : 'rgba(60, 60, 67, 0.6)',
+                        borderBottom: loginMethod === 'otp' ? '2px solid #007AFF' : '2px solid transparent',
+                        cursor: 'pointer'
                       }}
                     >
-                      📱 Mobile OTP (Quick)
+                      Mobile OTP
                     </button>
 
                     <button
                       type="button"
                       onClick={() => { setLoginMethod('password'); setErrorMessage(''); }}
                       style={{
-                        flex: 1,
-                        padding: '8px',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        borderRadius: '8px',
+                        background: 'none',
                         border: 'none',
-                        cursor: 'pointer',
-                        color: loginMethod === 'password' ? '#0284c7' : '#64748b',
-                        background: loginMethod === 'password' ? '#ffffff' : 'transparent',
-                        boxShadow: loginMethod === 'password' ? '0 1px 4px rgba(0,0,0,0.06)' : 'none'
+                        padding: '4px 2px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        color: loginMethod === 'password' ? '#007AFF' : 'rgba(60, 60, 67, 0.6)',
+                        borderBottom: loginMethod === 'password' ? '2px solid #007AFF' : '2px solid transparent',
+                        cursor: 'pointer'
                       }}
                     >
-                      🔑 Email & Password
+                      Email & Password
                     </button>
                   </div>
 
                   {/* OTP Flow */}
                   {loginMethod === 'otp' ? (
-                    <form onSubmit={otpSent ? handleVerifyOtp : handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div className="auth-input-group">
-                        <label className="auth-input-label">Registered Mobile Number</label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <div style={{
-                            padding: '12px 14px',
-                            background: '#f8fafc',
-                            border: '1.5px solid #cbd5e1',
-                            borderRadius: '12px',
-                            fontWeight: 700,
-                            fontSize: '0.9rem',
-                            color: '#475569',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}>
+                    <form onSubmit={otpSent ? handleVerifyOtp : handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      
+                      {/* iOS Inset Grouped Cell */}
+                      <div style={{
+                        background: 'rgba(118, 118, 128, 0.08)',
+                        borderRadius: '14px',
+                        border: '0.5px solid rgba(60, 60, 67, 0.15)',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 14px' }}>
+                          <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'rgba(60, 60, 67, 0.8)', marginRight: '10px' }}>
                             🇮🇳 +91
-                          </div>
+                          </span>
                           <input
                             type="tel"
                             maxLength={10}
-                            placeholder="Enter 10-digit mobile"
+                            placeholder="Mobile Number"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                            className="auth-input"
-                            style={{ flex: 1, letterSpacing: '0.04em', fontWeight: 600, fontSize: '0.95rem' }}
+                            style={{
+                              flex: 1,
+                              border: 'none',
+                              background: 'transparent',
+                              outline: 'none',
+                              fontSize: '0.96rem',
+                              fontWeight: 500,
+                              color: '#000000'
+                            }}
                             required
                           />
                         </div>
-                      </div>
 
-                      {otpSent && (
-                        <div style={{
-                          background: 'rgba(2, 132, 199, 0.05)',
-                          border: '1.5px solid #bae6fd',
-                          borderRadius: '14px',
-                          padding: '14px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '8px'
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0284c7' }}>
-                              Enter 4-Digit Code
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700, background: '#ecfdf5', padding: '2px 8px', borderRadius: '4px' }}>
-                              Demo OTP: 4829
-                            </span>
-                          </div>
-                          <input
-                            type="text"
-                            maxLength={4}
-                            placeholder="4829"
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                            className="auth-input"
-                            style={{ textAlign: 'center', fontSize: '1.4rem', letterSpacing: '0.3em', fontWeight: 800 }}
-                            autoFocus
-                            required
-                          />
-                        </div>
-                      )}
+                        {otpSent && (
+                          <>
+                            <div style={{ height: '0.5px', background: 'rgba(60, 60, 67, 0.12)', marginLeft: '16px' }} />
+                            <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: '0.84rem', fontWeight: 600, color: 'rgba(60, 60, 67, 0.8)' }}>
+                                Verification Code
+                              </span>
+                              <input
+                                type="text"
+                                maxLength={4}
+                                placeholder="4 digits"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                style={{
+                                  width: '100px',
+                                  textAlign: 'right',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  outline: 'none',
+                                  fontSize: '1.05rem',
+                                  fontWeight: 700,
+                                  letterSpacing: '0.2em',
+                                  color: '#007AFF'
+                                }}
+                                autoFocus
+                                required
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
 
                       <button
                         type="submit"
-                        className="btn-primary"
                         disabled={isLoading}
                         style={{
                           width: '100%',
-                          padding: '14px',
+                          height: '46px',
+                          borderRadius: '13px',
+                          border: 'none',
+                          background: '#007AFF',
+                          color: '#ffffff',
                           fontSize: '0.95rem',
-                          borderRadius: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
                           justifyContent: 'center',
-                          fontWeight: 700
+                          gap: '6px',
+                          boxShadow: '0 4px 12px rgba(0, 122, 255, 0.28)',
+                          transition: 'opacity 0.15s ease'
                         }}
                       >
-                        {isLoading ? 'Verifying...' : otpSent ? 'Verify & Open Farm Dashboard' : 'Send OTP on Phone'}
+                        {isLoading ? 'Verifying...' : otpSent ? 'Sign In to Farm' : 'Send Verification Code'}
                       </button>
                     </form>
                   ) : (
-                    /* Email & Password Flow */
-                    <form onSubmit={handlePasswordLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div className="auth-input-group">
-                        <label className="auth-input-label">Email or Username</label>
-                        <input
-                          type="text"
-                          placeholder="mohith.baggu@wellaqua.farm"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="auth-input"
-                          required
-                        />
-                      </div>
-
-                      <div className="auth-input-group">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <label className="auth-input-label">Password</label>
-                          <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: 600 }}>Default: farmer@123</span>
+                    /* Password Flow */
+                    <form onSubmit={handlePasswordLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <div style={{
+                        background: 'rgba(118, 118, 128, 0.08)',
+                        borderRadius: '14px',
+                        border: '0.5px solid rgba(60, 60, 67, 0.15)',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{ padding: '12px 14px' }}>
+                          <input
+                            type="text"
+                            placeholder="Email or User ID"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            style={{
+                              width: '100%',
+                              border: 'none',
+                              background: 'transparent',
+                              outline: 'none',
+                              fontSize: '0.95rem',
+                              fontWeight: 500,
+                              color: '#000000'
+                            }}
+                            required
+                          />
                         </div>
-                        <div style={{ position: 'relative' }}>
+
+                        <div style={{ height: '0.5px', background: 'rgba(60, 60, 67, 0.12)', marginLeft: '16px' }} />
+
+                        <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', position: 'relative' }}>
                           <input
                             type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••"
+                            placeholder="Password or PIN"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="auth-input"
-                            style={{ paddingRight: '40px' }}
+                            style={{
+                              flex: 1,
+                              border: 'none',
+                              background: 'transparent',
+                              outline: 'none',
+                              fontSize: '0.95rem',
+                              fontWeight: 500,
+                              color: '#000000',
+                              paddingRight: '30px'
+                            }}
                             required
                           />
                           <button
@@ -835,13 +868,12 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
                             onClick={() => setShowPassword(!showPassword)}
                             style={{
                               position: 'absolute',
-                              right: '12px',
-                              top: '50%',
-                              transform: 'translateY(-50%)',
+                              right: '14px',
                               background: 'none',
                               border: 'none',
-                              color: '#64748b',
-                              cursor: 'pointer'
+                              color: 'rgba(60, 60, 67, 0.6)',
+                              cursor: 'pointer',
+                              padding: '2px'
                             }}
                           >
                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -851,287 +883,131 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
 
                       <button
                         type="submit"
-                        className="btn-primary"
                         disabled={isLoading}
                         style={{
                           width: '100%',
-                          padding: '14px',
+                          height: '46px',
+                          borderRadius: '13px',
+                          border: 'none',
+                          background: '#007AFF',
+                          color: '#ffffff',
                           fontSize: '0.95rem',
-                          borderRadius: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
                           justifyContent: 'center',
-                          fontWeight: 700
+                          gap: '6px',
+                          boxShadow: '0 4px 12px rgba(0, 122, 255, 0.28)'
                         }}
                       >
-                        {isLoading ? 'Signing In...' : 'Sign In to Farm'}
+                        {isLoading ? 'Signing In...' : 'Sign In'}
                       </button>
                     </form>
                   )}
 
-                  {/* ⚡ Prominent 1-Tap VIP Demo Login Pass */}
-                  <div
-                    onClick={handleDemoLogin}
-                    style={{
-                      marginTop: '6px',
-                      background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
-                      border: '2px solid #93c5fd',
-                      borderRadius: '16px',
-                      padding: '14px 16px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.1)'
-                    }}
-                    title="Click for instant 1-tap demo access"
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #0284c7, #2563eb)',
-                        color: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        fontSize: '0.95rem',
-                        boxShadow: '0 2px 8px rgba(2, 132, 199, 0.35)',
-                        flexShrink: 0
-                      }}>
-                        MB
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a' }}>
-                            Mohith Kumar Baggu
-                          </span>
-                          <span className="badge badge-cyan" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>
-                            DEMO
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px' }}>
-                          Srimannarayana Aqua Farm • 3 Ponds (Bhimavaram)
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      background: '#0284c7',
-                      color: '#ffffff',
-                      borderRadius: '10px',
-                      padding: '8px 12px',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      flexShrink: 0,
-                      boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)'
-                    }}>
-                      <Sparkles size={13} />
-                      <span>1-Tap</span>
-                    </div>
-                  </div>
-
-                  {/* ================= ADMIN PASSCODE LOGIN (PASSCODE: 9900) ================= */}
-                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
-                    {!showAdminPasscode ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowAdminPasscode(true);
-                          setAdminPasscode('');
-                          setAdminPasscodeError('');
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          borderRadius: '12px',
-                          border: '1.5px dashed #cbd5e1',
-                          background: 'rgba(248, 250, 252, 0.9)',
-                          color: '#475569',
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <ShieldCheck size={16} color="#0284c7" />
-                        <span>👑 Admin Login (అడ్మిన్ లాగిన్ - Passcode: 9900)</span>
-                      </button>
-                    ) : (
-                      <form
-                        onSubmit={handleAdminPasscodeSubmit}
-                        style={{
-                          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                          color: '#ffffff',
-                          borderRadius: '14px',
-                          padding: '14px 16px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '10px',
-                          boxShadow: '0 8px 24px rgba(15, 23, 42, 0.25)',
-                          animation: 'fadeIn 0.2s ease-out'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <ShieldCheck size={18} color="#fbbf24" />
-                            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#fbbf24' }}>
-                              Admin Passcode Login
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => { setShowAdminPasscode(false); setAdminPasscodeError(''); }}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#94a3b8',
-                              fontSize: '0.78rem',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ✕ Cancel
-                          </button>
-                        </div>
-
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>
-                          Enter the official 4-digit security passcode to access administrator controls.
-                        </p>
-
-                        {adminPasscodeError && (
-                          <div style={{
-                            background: 'rgba(239, 68, 68, 0.2)',
-                            border: '1px solid #ef4444',
-                            color: '#fca5a5',
-                            padding: '6px 10px',
-                            borderRadius: '8px',
-                            fontSize: '0.78rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}>
-                            <span>⚠️ {adminPasscodeError}</span>
-                          </div>
-                        )}
-
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <input
-                            type="password"
-                            maxLength={6}
-                            autoFocus
-                            placeholder="Enter Passcode (e.g. 9900)"
-                            value={adminPasscode}
-                            onChange={(e) => {
-                              setAdminPasscode(e.target.value);
-                              setAdminPasscodeError('');
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: '10px 12px',
-                              borderRadius: '10px',
-                              border: '1px solid #334155',
-                              background: '#020617',
-                              color: '#ffffff',
-                              fontSize: '1rem',
-                              letterSpacing: '0.25em',
-                              fontWeight: 700,
-                              textAlign: 'center'
-                            }}
-                          />
-
-                          <button
-                            type="submit"
-                            style={{
-                              padding: '10px 18px',
-                              borderRadius: '10px',
-                              border: 'none',
-                              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                              color: '#0f172a',
-                              fontWeight: 800,
-                              fontSize: '0.85rem',
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            Enter →
-                          </button>
-                        </div>
-                      </form>
-                    )}
-                  </div>
-
                 </div>
               )}
 
-              {/* ======================= SIGN UP ======================= */}
+              {/* ======================= iOS SIGN UP ======================= */}
               {mode === 'signup' && (
-                <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div className="auth-input-group">
-                    <label className="auth-input-label">Farmer Full Name (రైతు పూర్తి పేరు) *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Ramesh Varma"
-                      value={signupForm.name}
-                      onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
-                      className="auth-input"
-                      required
-                    />
-                  </div>
+                <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  
+                  {/* Personal & Contact Group */}
+                  <div style={{
+                    background: 'rgba(118, 118, 128, 0.08)',
+                    borderRadius: '14px',
+                    border: '0.5px solid rgba(60, 60, 67, 0.15)',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ padding: '12px 14px' }}>
+                      <input
+                        type="text"
+                        placeholder="Farmer Full Name"
+                        value={signupForm.name}
+                        onChange={(e) => setSignupForm({ ...signupForm, name: e.target.value })}
+                        style={{
+                          width: '100%',
+                          border: 'none',
+                          background: 'transparent',
+                          outline: 'none',
+                          fontSize: '0.92rem',
+                          fontWeight: 500,
+                          color: '#000000'
+                        }}
+                        required
+                      />
+                    </div>
 
-                  <div className="auth-input-group">
-                    <label className="auth-input-label">Email Address (ఈమెయిల్) - Optional</label>
-                    <input
-                      type="email"
-                      placeholder="e.g. ramesh@gmail.com (Auto-generated if empty)"
-                      value={signupForm.email || ''}
-                      onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
-                      className="auth-input"
-                    />
-                  </div>
+                    <div style={{ height: '0.5px', background: 'rgba(60, 60, 67, 0.12)', marginLeft: '16px' }} />
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div className="auth-input-group">
-                      <label className="auth-input-label">Mobile Number *</label>
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '12px 14px' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'rgba(60, 60, 67, 0.8)', marginRight: '8px' }}>
+                        🇮🇳 +91
+                      </span>
                       <input
                         type="tel"
                         maxLength={10}
-                        placeholder="9876543210"
+                        placeholder="Mobile Number"
                         value={signupForm.phone}
                         onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value.replace(/\D/g, '') })}
-                        className="auth-input"
+                        style={{
+                          flex: 1,
+                          border: 'none',
+                          background: 'transparent',
+                          outline: 'none',
+                          fontSize: '0.92rem',
+                          fontWeight: 500,
+                          color: '#000000'
+                        }}
                         required
                       />
                     </div>
 
-                    <div className="auth-input-group">
-                      <label className="auth-input-label">Farm / Hatchery</label>
+                    <div style={{ height: '0.5px', background: 'rgba(60, 60, 67, 0.12)', marginLeft: '16px' }} />
+
+                    <div style={{ padding: '12px 14px' }}>
                       <input
                         type="text"
-                        placeholder="e.g. Varma Farm"
+                        placeholder="Farm or Hatchery Name"
                         value={signupForm.farmName}
                         onChange={(e) => setSignupForm({ ...signupForm, farmName: e.target.value })}
-                        className="auth-input"
+                        style={{
+                          width: '100%',
+                          border: 'none',
+                          background: 'transparent',
+                          outline: 'none',
+                          fontSize: '0.92rem',
+                          fontWeight: 500,
+                          color: '#000000'
+                        }}
                         required
                       />
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div className="auth-input-group">
-                      <label className="auth-input-label">Location / District</label>
+                  {/* Location & Species Group */}
+                  <div style={{
+                    background: 'rgba(118, 118, 128, 0.08)',
+                    borderRadius: '14px',
+                    border: '0.5px solid rgba(60, 60, 67, 0.15)',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px' }}>
+                      <span style={{ fontSize: '0.86rem', color: 'rgba(60, 60, 67, 0.75)', fontWeight: 500 }}>District</span>
                       <select
                         value={signupForm.location}
                         onChange={(e) => setSignupForm({ ...signupForm, location: e.target.value })}
-                        className="auth-input"
-                        style={{ fontSize: '0.85rem' }}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          outline: 'none',
+                          fontSize: '0.88rem',
+                          fontWeight: 600,
+                          color: '#007AFF',
+                          cursor: 'pointer',
+                          textAlign: 'right'
+                        }}
                       >
                         <option value="Bhimavaram, Andhra Pradesh">Bhimavaram (AP)</option>
                         <option value="Nellore, Andhra Pradesh">Nellore (AP)</option>
@@ -1143,13 +1019,23 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
                       </select>
                     </div>
 
-                    <div className="auth-input-group">
-                      <label className="auth-input-label">Primary Species</label>
+                    <div style={{ height: '0.5px', background: 'rgba(60, 60, 67, 0.12)', marginLeft: '16px' }} />
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px' }}>
+                      <span style={{ fontSize: '0.86rem', color: 'rgba(60, 60, 67, 0.75)', fontWeight: 500 }}>Species</span>
                       <select
                         value={signupForm.species}
                         onChange={(e) => setSignupForm({ ...signupForm, species: e.target.value })}
-                        className="auth-input"
-                        style={{ fontSize: '0.85rem' }}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          outline: 'none',
+                          fontSize: '0.88rem',
+                          fontWeight: 600,
+                          color: '#007AFF',
+                          cursor: 'pointer',
+                          textAlign: 'right'
+                        }}
                       >
                         <option value="Vannamei Shrimp">Vannamei Shrimp</option>
                         <option value="Black Tiger Prawn">Black Tiger Prawn</option>
@@ -1157,56 +1043,103 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
                         <option value="Indian Major Carps">Carps (రోహు / కట్ల)</option>
                       </select>
                     </div>
-                  </div>
 
-                  <div className="auth-input-group">
-                    <label className="auth-input-label">4-Digit Quick Security PIN</label>
-                    <input
-                      type="password"
-                      maxLength={6}
-                      placeholder="e.g. 1234"
-                      value={signupForm.pin}
-                      onChange={(e) => setSignupForm({ ...signupForm, pin: e.target.value })}
-                      className="auth-input"
-                      required
-                    />
+                    <div style={{ height: '0.5px', background: 'rgba(60, 60, 67, 0.12)', marginLeft: '16px' }} />
+
+                    <div style={{ padding: '12px 14px' }}>
+                      <input
+                        type="password"
+                        maxLength={6}
+                        placeholder="Create 4-Digit Security PIN"
+                        value={signupForm.pin}
+                        onChange={(e) => setSignupForm({ ...signupForm, pin: e.target.value.replace(/\D/g, '') })}
+                        style={{
+                          width: '100%',
+                          border: 'none',
+                          background: 'transparent',
+                          outline: 'none',
+                          fontSize: '0.92rem',
+                          fontWeight: 500,
+                          color: '#000000'
+                        }}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <button
                     type="submit"
-                    className="btn-primary"
                     disabled={isLoading}
                     style={{
                       width: '100%',
-                      padding: '14px',
+                      height: '46px',
+                      borderRadius: '13px',
+                      border: 'none',
+                      background: '#007AFF',
+                      color: '#ffffff',
                       fontSize: '0.95rem',
-                      borderRadius: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
-                      fontWeight: 700,
-                      marginTop: '4px'
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(0, 122, 255, 0.28)'
                     }}
                   >
-                    {isLoading ? 'Creating Farm Profile...' : 'Complete Registration & Start'}
+                    {isLoading ? 'Creating Profile...' : 'Create Farm Account'}
                   </button>
                 </form>
               )}
 
-              {/* Skip as Guest Footer */}
-              <div style={{ textAlign: 'center', paddingTop: '6px' }}>
+              {/* Bottom Actions: Guest Exploration & Discreet Admin Portal Link */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '10px',
+                paddingTop: '10px',
+                borderTop: '0.5px solid rgba(60, 60, 67, 0.12)'
+              }}>
                 <button
                   type="button"
                   onClick={onContinueGuest}
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#64748b',
+                    color: 'rgba(60, 60, 67, 0.75)',
                     fontSize: '0.82rem',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    fontWeight: 600
+                    fontWeight: 500,
+                    cursor: 'pointer'
                   }}
                 >
-                  Skip for now & Explore Dashboard as Guest
+                  Skip for now & Explore as Guest
+                </button>
+
+                {/* Discreet Admin Portal Link without visible passcode */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAdminPasscode(true);
+                    setAdminPasscode('');
+                    setAdminPasscodeError('');
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#007AFF',
+                    fontSize: '0.82rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 8px'
+                  }}
+                >
+                  <Shield size={13} />
+                  <span>Admin Portal</span>
+                  <ChevronRight size={12} />
                 </button>
               </div>
 
@@ -1215,19 +1148,153 @@ export default function AuthScreen({ onLoginSuccess, onContinueGuest, onAdminLog
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                fontSize: '0.74rem',
-                color: '#64748b',
-                paddingTop: '8px',
-                borderTop: '1px solid #f1f5f9'
+                gap: '6px',
+                fontSize: '0.72rem',
+                color: 'rgba(60, 60, 67, 0.5)'
               }}>
-                <ShieldCheck size={14} color="#059669" />
-                <span>MPEDA & CAA Compliant • Encrypted Farmer Storage</span>
+                <ShieldCheck size={13} color="#34C759" />
+                <span>MPEDA & CAA Compliant • Encrypted Farm Data</span>
               </div>
 
             </div>
 
           </div>
+
+          {/* ================= iOS ADMIN PASSCODE MODAL SHEET ================= */}
+          {showAdminPasscode && (
+            <div 
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(0, 0, 0, 0.45)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 9999,
+                padding: '16px'
+              }}
+              onClick={() => { setShowAdminPasscode(false); setAdminPasscodeError(''); }}
+            >
+              <div 
+                style={{
+                  width: '100%',
+                  maxWidth: '320px',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(25px)',
+                  WebkitBackdropFilter: 'blur(25px)',
+                  borderRadius: '20px',
+                  boxShadow: '0 20px 48px rgba(0, 0, 0, 0.35)',
+                  overflow: 'hidden',
+                  textAlign: 'center',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ padding: '22px 20px 18px' }}>
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    background: 'rgba(0, 122, 255, 0.1)',
+                    color: '#007AFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 12px'
+                  }}>
+                    <Lock size={22} />
+                  </div>
+                  
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: '0 0 4px', color: '#000000' }}>
+                    Admin Portal
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'rgba(60, 60, 67, 0.75)', margin: 0 }}>
+                    Enter passcode to continue
+                  </p>
+
+                  {adminPasscodeError && (
+                    <div style={{ color: '#FF3B30', fontSize: '0.78rem', marginTop: '8px', fontWeight: 500 }}>
+                      {adminPasscodeError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleAdminPasscodeSubmit} style={{ marginTop: '16px' }}>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      autoFocus
+                      placeholder="Passcode"
+                      value={adminPasscode}
+                      onChange={(e) => {
+                        setAdminPasscode(e.target.value);
+                        setAdminPasscodeError('');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        border: '0.5px solid rgba(60, 60, 67, 0.25)',
+                        background: 'rgba(118, 118, 128, 0.12)',
+                        color: '#000000',
+                        fontSize: '1.1rem',
+                        letterSpacing: '0.3em',
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+
+                    {/* Apple Style Modal Dual Actions */}
+                    <div style={{
+                      display: 'flex',
+                      borderTop: '0.5px solid rgba(60, 60, 67, 0.18)',
+                      marginTop: '18px',
+                      marginRight: '-20px',
+                      marginLeft: '-20px',
+                      marginBottom: '-18px'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => { setShowAdminPasscode(false); setAdminPasscodeError(''); }}
+                        style={{
+                          flex: 1,
+                          padding: '13px',
+                          background: 'none',
+                          border: 'none',
+                          borderRight: '0.5px solid rgba(60, 60, 67, 0.18)',
+                          color: '#007AFF',
+                          fontSize: '0.94rem',
+                          fontWeight: 400,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        style={{
+                          flex: 1,
+                          padding: '13px',
+                          background: 'none',
+                          border: 'none',
+                          color: '#007AFF',
+                          fontSize: '0.94rem',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Unlock
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
 

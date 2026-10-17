@@ -97,7 +97,7 @@ export default function AuthModal({
         onAdminLoginSuccess();
       }
     } else {
-      setAdminPasscodeError('Incorrect passcode! Passcode is 9900.');
+      setAdminPasscodeError('Incorrect passcode. Please try again.');
     }
   };
 
@@ -701,73 +701,8 @@ export default function AuthModal({
                 </form>
               )}
 
-              {/* ⚡ Quick 1-Click Demo Farmer Login Card */}
-              <div 
-                onClick={handleDemoLogin}
-                style={{
-                  marginTop: '4px',
-                  background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.06) 0%, rgba(5, 150, 105, 0.08) 100%)',
-                  border: '1.5px solid #93c5fd',
-                  borderRadius: '14px',
-                  padding: '12px 14px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.08)'
-                }}
-                title="Click to sign in with preloaded farm data"
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #0284c7, #2563eb)',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: '0.85rem',
-                    flexShrink: 0
-                  }}>
-                    MB
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-main)' }}>
-                        Mohith Kumar Baggu
-                      </span>
-                      <span className="badge badge-cyan" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>DEMO</span>
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '1px' }}>
-                      Srimannarayana Aqua Farm • 3 Ponds (Bhimavaram)
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{
-                  background: '#0284c7',
-                  color: '#ffffff',
-                  borderRadius: '8px',
-                  padding: '6px 10px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  flexShrink: 0
-                }}>
-                  <Sparkles size={12} />
-                  <span>1-Tap</span>
-                </div>
-              </div>
-
-              {/* ================= ADMIN PASSCODE LOGIN (PASSCODE: 9900) ================= */}
-              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+              {/* ================= ADMIN PASSCODE LOGIN (DISCREET LINK) ================= */}
+              <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '0.5px solid rgba(60, 60, 67, 0.12)', display: 'flex', justifyContent: 'center' }}>
                 {!showAdminPasscode ? (
                   <button
                     type="button"
@@ -777,78 +712,62 @@ export default function AuthModal({
                       setAdminPasscodeError('');
                     }}
                     style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      borderRadius: '10px',
-                      border: '1.5px dashed #cbd5e1',
-                      background: 'rgba(248, 250, 252, 0.9)',
-                      color: '#475569',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
+                      background: 'none',
+                      border: 'none',
+                      color: '#007AFF',
+                      fontSize: '0.82rem',
+                      fontWeight: 500,
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px'
                     }}
                   >
-                    <ShieldCheck size={15} color="#0284c7" />
-                    <span>👑 Admin Login (అడ్మిన్ లాగిన్ - Passcode: 9900)</span>
+                    <ShieldCheck size={14} color="#007AFF" />
+                    <span>Admin Portal</span>
+                    <ChevronRight size={13} />
                   </button>
                 ) : (
                   <form
                     onSubmit={handleAdminPasscodeSubmit}
                     style={{
-                      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                      color: '#ffffff',
-                      borderRadius: '12px',
+                      width: '100%',
+                      background: 'rgba(118, 118, 128, 0.08)',
+                      borderRadius: '14px',
                       padding: '12px 14px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '9px',
-                      boxShadow: '0 6px 18px rgba(15, 23, 42, 0.25)'
+                      gap: '8px',
+                      border: '0.5px solid rgba(60, 60, 67, 0.15)'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <ShieldCheck size={16} color="#fbbf24" />
-                        <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#fbbf24' }}>
-                          Admin Passcode Login
-                        </span>
-                      </div>
+                      <span style={{ fontWeight: 600, fontSize: '0.84rem', color: '#000000' }}>
+                        Admin Portal
+                      </span>
                       <button
                         type="button"
                         onClick={() => { setShowAdminPasscode(false); setAdminPasscodeError(''); }}
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#94a3b8',
+                          color: 'rgba(60, 60, 67, 0.6)',
                           fontSize: '0.75rem',
                           cursor: 'pointer'
                         }}
                       >
-                        ✕ Cancel
+                        Cancel
                       </button>
                     </div>
 
-                    <p style={{ margin: 0, fontSize: '0.74rem', color: '#94a3b8' }}>
-                      Enter official 4-digit security passcode to access administrator portal.
+                    <p style={{ margin: 0, fontSize: '0.74rem', color: 'rgba(60, 60, 67, 0.7)' }}>
+                      Enter passcode to continue
                     </p>
 
                     {adminPasscodeError && (
-                      <div style={{
-                        background: 'rgba(239, 68, 68, 0.2)',
-                        border: '1px solid #ef4444',
-                        color: '#fca5a5',
-                        padding: '5px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.76rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}>
-                        <span>⚠️ {adminPasscodeError}</span>
+                      <div style={{ color: '#FF3B30', fontSize: '0.75rem', fontWeight: 500 }}>
+                        {adminPasscodeError}
                       </div>
                     )}
 
@@ -857,7 +776,7 @@ export default function AuthModal({
                         type="password"
                         maxLength={6}
                         autoFocus
-                        placeholder="Passcode: 9900"
+                        placeholder="Passcode"
                         value={adminPasscode}
                         onChange={(e) => {
                           setAdminPasscode(e.target.value);
@@ -867,13 +786,14 @@ export default function AuthModal({
                           flex: 1,
                           padding: '8px 12px',
                           borderRadius: '8px',
-                          border: '1px solid #334155',
-                          background: '#020617',
-                          color: '#ffffff',
-                          fontSize: '0.95rem',
-                          letterSpacing: '0.2em',
+                          border: '0.5px solid rgba(60, 60, 67, 0.2)',
+                          background: '#ffffff',
+                          color: '#000000',
+                          fontSize: '1rem',
+                          letterSpacing: '0.25em',
                           fontWeight: 700,
-                          textAlign: 'center'
+                          textAlign: 'center',
+                          outline: 'none'
                         }}
                       />
 
@@ -883,15 +803,14 @@ export default function AuthModal({
                           padding: '8px 16px',
                           borderRadius: '8px',
                           border: 'none',
-                          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                          color: '#0f172a',
-                          fontWeight: 800,
+                          background: '#007AFF',
+                          color: '#ffffff',
+                          fontWeight: 600,
                           fontSize: '0.82rem',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap'
+                          cursor: 'pointer'
                         }}
                       >
-                        Enter →
+                        Unlock
                       </button>
                     </div>
                   </form>
