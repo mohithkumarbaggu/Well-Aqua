@@ -449,37 +449,6 @@ export default function DashboardOverview({
               Total Seed: <strong style={{ color: 'var(--text-main)' }}>{activePond.stockedPL.toLocaleString()} PL</strong>
             </p>
           </div>
-
-          <div className="pond-header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button 
-              onClick={onOpenReportModal}
-              className="btn-primary"
-              style={{
-                background: 'linear-gradient(135deg, #059669, #0284c7)',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-              title="Enter your authentic pond water test numbers, stocking seed, and feeding data"
-            >
-              <span>📝 Log Farm Report Data</span>
-            </button>
-            <button 
-              onClick={() => setCurrentTab('lab')} 
-              className="btn-secondary"
-            >
-              <FlaskConical size={16} />
-              <span>{t.bookSlotBtn}</span>
-            </button>
-            <button 
-              onClick={() => setCurrentTab('market')} 
-              className="btn-secondary"
-            >
-              <TrendingUp size={16} />
-              <span>{t.marketPrices || 'Market Price'}</span>
-            </button>
-          </div>
         </div>
       </div>
 
